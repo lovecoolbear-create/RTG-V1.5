@@ -1,0 +1,27 @@
+{
+    "name" : "ReadyToGo",
+    "appid" : "__UNI__C101DD7",
+    "description" : "ReadyToGo 微信小程序",
+    "versionName" : "0.0.1",
+    "versionCode" : "1",
+    "mp-weixin" : {
+        "appid" : "wx6404146ef45929a0",
+        "lazyCodeLoading" : "requiredComponents",
+        "permission" : {
+            "scope.userLocation" : {
+                "desc" : "用于实时同步当前位置和天气"
+            },
+            "scope.addPhoneCalendar" : {
+                "desc" : "用于把行程写入系统日历并设置提醒"
+            }
+        },
+        "requiredPrivateInfos" : [
+            "getLocation"
+        ],
+        "setting" : {
+            "urlCheck" : false,
+            "es6" : true,
+            "minified" : true
+        }
+    }
+}

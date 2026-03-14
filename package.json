@@ -1,0 +1,28 @@
+{
+  "name": "readytogo-wechat",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "dev:mp-weixin": "uni -p mp-weixin",
+    "build:mp-weixin": "uni build -p mp-weixin",
+    "dev:h5": "uni",
+    "build:h5": "uni build"
+  },
+  "dependencies": {
+    "@dcloudio/uni-app": "3.0.0-4080720251210001",
+    "@dcloudio/uni-cli-i18n": "2.0.2-4080720251210002",
+    "@dcloudio/uni-cli-shared": "3.0.0-4080720251210001",
+    "@dcloudio/uni-mp-weixin": "3.0.0-4080720251210001",
+    "@dcloudio/uni-shared": "3.0.0-4080720251210001",
+    "@dcloudio/uni-ui": "^1.5.11",
+    "@dcloudio/vite-plugin-uni": "3.0.0-4080720251210001",
+    "pinia": "^2.2.6",
+    "vue": "^3.4.38"
+  },
+  "devDependencies": {
+    "sass": "^1.98.0",
+    "semver": "^7.6.3",
+    "vite": "^4.5.5",
+    "webpack": "^5.90.0"
+  }
+}

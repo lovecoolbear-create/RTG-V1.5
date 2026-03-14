@@ -1,0 +1,106 @@
+{
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^uni-(.*)": "@dcloudio/uni-ui/lib/uni-$1/uni-$1.vue"
+    }
+  },
+  "lazyCodeLoading": "requiredComponents",
+  "pages": [
+    {
+      "path": "pages/tab-home/index",
+      "style": {
+        "navigationBarTitleText": "日历"
+      }
+    },
+    {
+      "path": "pages/tab-gear/index",
+      "style": {
+        "navigationBarTitleText": "装备库"
+      }
+    },
+    {
+      "path": "pages/tab-templates/index",
+      "style": {
+        "navigationBarTitleText": "模板库"
+      }
+    },
+    {
+      "path": "pages/tab-history/index",
+      "style": {
+        "navigationBarTitleText": "历史"
+      }
+    },
+    {
+      "path": "pages/tab-settings/index",
+      "style": {
+        "navigationBarTitleText": "设置"
+      }
+    },
+    {
+      "path": "pages/trip-checklist/index",
+      "style": {
+        "navigationBarTitleText": "清单"
+      }
+    },
+    {
+      "path": "pages/template-selector/index",
+      "style": {
+        "navigationBarTitleText": "选择模板"
+      }
+    },
+    {
+      "path": "pages/template-edit/index",
+      "style": {
+        "navigationBarTitleText": "编辑模板"
+      }
+    },
+    {
+      "path": "pages/gear-picker/index",
+      "style": {
+        "navigationBarTitleText": "选择装备"
+      }
+    },
+    {
+      "path": "pages/history-detail/index",
+      "style": {
+        "navigationBarTitleText": "归档详情"
+      }
+    },
+    {
+      "path": "pages/trip-edit/index",
+      "style": {
+        "navigationBarTitleText": "编辑行程"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarBackgroundColor": "#040a16",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#071020",
+    "backgroundColorTop": "#040a16",
+    "backgroundColorBottom": "#071020",
+    "disableScroll": true
+  },
+  "permission": {
+    "scope.userLocation": {
+      "desc": "用于实时同步当前位置和天气"
+    },
+    "scope.addPhoneCalendar": {
+      "desc": "用于把行程写入系统日历并设置提醒"
+    }
+  },
+  "tabBar": {
+    "color": "#9bb0cb",
+    "selectedColor": "#f7fbff",
+    "backgroundColor": "#071020",
+    "borderStyle": "black",
+    "list": [
+      { "pagePath": "pages/tab-home/index", "text": "日历" },
+      { "pagePath": "pages/tab-gear/index", "text": "装备库" },
+      { "pagePath": "pages/tab-templates/index", "text": "模板库" },
+      { "pagePath": "pages/tab-history/index", "text": "历史" },
+      { "pagePath": "pages/tab-settings/index", "text": "设置" }
+    ]
+  }
+}

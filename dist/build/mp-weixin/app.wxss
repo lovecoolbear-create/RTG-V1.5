@@ -1,0 +1,2 @@
+page{background:#071020;transition:background-color .2s ease}.page.theme-day,.page.theme-night{transition:background .2s ease}
+page{--status-bar-height:25px;--top-window-height:0px;--window-top:0px;--window-bottom:0px;--window-left:0px;--window-right:0px;--window-magin:0px}[data-c-h="true"]{display: none !important;}

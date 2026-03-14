@@ -1,0 +1,19 @@
+
+.page.data-v-e5775869 { padding: 12px;
+}
+.block.data-v-e5775869 { background: #fff; padding: 12px; border-radius: 12px; margin-bottom: 12px;
+}
+.label.data-v-e5775869 { font-weight: 600; margin-bottom: 6px;
+}
+.input.data-v-e5775869 { border: 1px solid #eee; border-radius: 8px; padding: 8px;
+}
+.row.data-v-e5775869 { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 8px;
+}
+.picker.data-v-e5775869 { border: 1px solid #eee; border-radius: 8px; padding: 8px; min-width: 120px;
+}
+.pill.data-v-e5775869 { display: inline-flex; padding: 4px 10px; border-radius: 999px; background: #f2f2f2; color: #333; font-size: 12px;
+}
+.footer.data-v-e5775869 { margin-top: 24px;
+}
+.primary.data-v-e5775869 { width: 100%; background: #3b82f6; color: #fff; padding: 10px 14px; border-radius: 12px;
+}

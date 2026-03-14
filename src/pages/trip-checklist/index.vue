@@ -1,0 +1,1137 @@
+<template>
+  <view class="page" :class="themeClass" :style="pageThemeStyle">
+    <view class="meta-card" :class="{ compact: !showDetails }">
+      <view class="meta-top">
+        <text class="badge">{{ isReturn ? '返程清点' : '出发清点' }}</text>
+        <text class="detail-toggle" @tap="toggleDetails">{{ showDetails ? '收起详情' : '详情' }}</text>
+      </view>
+      <view class="title-line">
+        <text class="title">{{ trip?.title || '当前行程' }}</text>
+        <text class="progress">已勾选 {{ checkedCount }}/{{ totalCount }}</text>
+      </view>
+      <view v-if="groupProgressList.length" class="group-progress-wrap">
+        <scroll-view scroll-x class="group-progress-scroll">
+          <view class="group-progress-list">
+            <view
+              v-for="gp in groupProgressList"
+              :key="gp.anchorId"
+              class="group-progress-pill"
+              :class="{ done: gp.done }"
+              @tap="jumpToGroup(gp.anchorId)"
+            >
+              <text class="group-progress-name">{{ gp.name }}</text>
+              <text class="group-progress-value">{{ gp.checked }}/{{ gp.total }}</text>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+      <view v-if="showDetails" class="detail-panel">
+        <view class="meta-grid">
+          <text class="meta">来源：{{ sourceLabel }}</text>
+          <text class="meta">模板：{{ templateCategoryLabel }}</text>
+          <text class="meta">时间：{{ scheduleLabel }}</text>
+          <text class="meta">地点：{{ destinationLabel }}</text>
+          <text class="meta">关键时间：{{ keyTimeLabel }}</text>
+          <text class="meta">证件类型：{{ idTypeLabel }}</text>
+        </view>
+        <view class="bag-bar">
+          <view class="bag-label">本次箱包</view>
+          <view class="bag-values">
+            <text v-if="activeTripBags.length === 0" class="bag-empty">未选择</text>
+            <text v-for="bag in activeTripBags" :key="bag.id" class="bag-pill">{{ bag.name }}</text>
+          </view>
+          <view class="drag-tip">长按清单卡片可删除</view>
+          <button size="mini" class="bag-btn" @tap="openBagPicker">选择箱包</button>
+        </view>
+        <view class="weight-bar">
+          <text class="weight-text">已估总重 {{ estimatedWeightLabel }}</text>
+          <text class="weight-sub">未估重 {{ unweightedCount }} 件</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="item-pane">
+      <scroll-view scroll-y class="item-scroll" :scroll-into-view="activeGroupAnchor" :scroll-with-animation="true">
+        <view v-if="items.length === 0" class="empty">暂无物品</view>
+        <view v-for="(g, gi) in groups" :id="`group-anchor-${gi}`" :key="g" class="group">
+          <view class="g-title">{{ g }}</view>
+          <view
+            v-for="it in itemsByGroup[g]"
+            :key="it.id"
+            class="row"
+            @tap="onRowTap(it)"
+            @longpress.stop.prevent="onRowLongPress(it)"
+          >
+            <view class="name-wrap">
+              <text class="name">{{ it.name }}</text>
+            </view>
+            <view class="r">
+              <text class="qty-tag">x{{ itemQty(it) }}</text>
+              <text class="more-tag" @tap.stop="openItemActions(it)">更多</text>
+              <switch :checked="!!it.isChecked" />
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+
+    <view class="footer">
+      <view v-if="quickItemPicks.length" class="quick-add">
+        <text class="quick-label">常用快捷添加</text>
+        <scroll-view scroll-x class="quick-scroll">
+          <view class="quick-list">
+            <text v-for="pick in quickItemPicks" :key="pick.id" class="quick-pill" @tap="addQuickItem(pick)">
+              + {{ pick.name }}
+            </text>
+          </view>
+        </scroll-view>
+      </view>
+      <view class="btns">
+        <button class="ghost" @tap="addCustomItem">添加物品</button>
+        <button class="ghost" @tap="saveAsTemplate">另存为模板</button>
+      </view>
+      <button class="primary" :disabled="!canFinish" @tap="finish">清点完成</button>
+    </view>
+    <view v-if="showBagPicker" class="mask" @tap="showBagPicker = false">
+      <view class="sheet" @tap.stop>
+        <text class="sheet-title">选择本次携带箱包</text>
+        <scroll-view scroll-y class="sheet-list">
+          <view v-for="bag in bags" :key="bag.id" class="sheet-item" @tap="toggleDraftBag(bag.id)">
+            <text>{{ bag.name }}</text>
+            <text class="sheet-check" :class="{ checked: draftBagIds.includes(bag.id) }">
+              {{ draftBagIds.includes(bag.id) ? '已选' : '未选' }}
+            </text>
+          </view>
+        </scroll-view>
+        <button class="sheet-btn" @tap="saveTripBags">保存</button>
+      </view>
+    </view>
+    <DarkDialog
+      :visible="dialogState.visible"
+      :mode="dialogState.mode"
+      :title="dialogState.title"
+      :message="dialogState.message"
+      :confirm-text="dialogState.confirmText"
+      :cancel-text="dialogState.cancelText"
+      :placeholder="dialogState.placeholder"
+      :model-value="dialogState.modelValue"
+      :danger="dialogState.danger"
+      :actions="dialogState.actions"
+      :close-on-mask="dialogState.closeOnMask"
+      @cancel="onDialogCancel"
+      @confirm="onDialogConfirm"
+      @action="onDialogAction"
+    />
+  </view>
+</template>
+
+<script setup>
+import { computed, nextTick, ref } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
+import { useTripStore } from '../../stores/trip'
+import { useTemplateStore } from '../../stores/templates'
+import { useGearStore } from '../../stores/gear'
+import DarkDialog from '../../components/DarkDialog.vue'
+import { useAutoThemeClass } from '../../services/theme'
+
+const tripId = ref('')
+const mode = ref('departure')
+const isReturn = computed(() => mode.value === 'return')
+
+const store = useTripStore()
+const tplStore = useTemplateStore()
+const gearStore = useGearStore()
+const { themeClass, pageThemeStyle } = useAutoThemeClass()
+const list = ref([])
+const showBagPicker = ref(false)
+const draftBagIds = ref([])
+const trip = computed(() => store.trips.find((t) => t.id === tripId.value) || null)
+const HOME_AUTO_TAB_KEY = 'home_auto_tab'
+const RULES_STORAGE_KEY = 'departure_rules_v1'
+const defaultDepartureRules = {
+  businessRequired: true,
+  outdoorCarry: true,
+  importantUnchecked: true,
+}
+const showDetails = ref(false)
+const activeGroupAnchor = ref('')
+const suppressTapUntil = ref(0)
+const dialogState = ref({
+  visible: false,
+  mode: 'confirm',
+  title: '',
+  message: '',
+  confirmText: '确认',
+  cancelText: '取消',
+  placeholder: '',
+  modelValue: '',
+  danger: false,
+  closeOnMask: true,
+  actions: [],
+})
+let dialogResolver = null
+
+onLoad((options) => {
+  tripId.value = options?.id || ''
+  mode.value = options?.mode || 'departure'
+  if (!isReturn.value) {
+    store.beginPacking(tripId.value)
+  }
+  refreshList()
+})
+
+const bags = computed(() => gearStore.bags || [])
+const tripBagIds = computed(() => (Array.isArray(trip.value?.tripBags) ? trip.value.tripBags : []))
+const activeTripBags = computed(() =>
+  tripBagIds.value.map((id) => bags.value.find((bag) => bag.id === id) || { id, name: '已删除箱包' }),
+)
+const items = computed(() => list.value)
+const itemsByGroup = computed(() => {
+  const map = {}
+  for (const it of items.value) {
+    const g = it.group || '其他'
+    ;(map[g] || (map[g] = [])).push(it)
+  }
+  return map
+})
+const groups = computed(() => Object.keys(itemsByGroup.value))
+function isTrackableItem(item) {
+  return isReturn.value ? !item?.isConsumable : true
+}
+const totalCount = computed(() => items.value.filter((it) => isTrackableItem(it)).length)
+const checkedCount = computed(() => items.value.filter((it) => isTrackableItem(it) && it.isChecked).length)
+const groupProgressList = computed(() =>
+  groups.value
+    .map((name, index) => {
+      const source = itemsByGroup.value[name] || []
+      const trackable = source.filter((it) => isTrackableItem(it))
+      const total = trackable.length
+      const checked = trackable.filter((it) => it.isChecked).length
+      return {
+        name,
+        anchorId: `group-anchor-${index}`,
+        total,
+        checked,
+        done: total > 0 && checked === total,
+      }
+    })
+    .filter((it) => it.total > 0),
+)
+const canFinish = computed(() => isReturn.value || checkedCount.value === totalCount.value)
+const sourceLabel = computed(() => {
+  const value = String(trip.value?.source || '').toLowerCase()
+  return value === 'calendar' ? '计划出行' : '快速出发'
+})
+const templateCategoryLabel = computed(() => {
+  const category = String(trip.value?.templateCategory || '').toLowerCase()
+  if (category === 'outdoor') return '户外'
+  if (category === 'business') return '商务'
+  return '通用'
+})
+const scheduleLabel = computed(() => {
+  const date = String(trip.value?.date || '').trim()
+  const time = String(trip.value?.scheduleTime || '').trim()
+  if (date && time) return `${date} ${time}`
+  if (date) return date
+  if (time) return time
+  return '未设置'
+})
+const destinationLabel = computed(() => String(trip.value?.destination || trip.value?.location || '').trim() || '未填写')
+const keyTimeLabel = computed(() => String(trip.value?.keyTime || '').trim() || '未填写')
+const idTypeLabel = computed(() => String(trip.value?.idType || '').trim() || '未填写')
+const estimatedWeightKg = computed(() =>
+  items.value
+    .filter((it) => it.isChecked && typeof it.weight === 'number' && it.weight >= 0)
+    .reduce((sum, it) => sum + Number(it.weight) * itemQty(it), 0),
+)
+const unweightedCount = computed(
+  () => items.value.filter((it) => it.isChecked && (typeof it.weight !== 'number' || it.weight < 0)).length,
+)
+const estimatedWeightLabel = computed(() => `${estimatedWeightKg.value.toFixed(1)} kg`)
+const quickItemPicks = computed(() => {
+  const source = Array.isArray(gearStore.items) ? gearStore.items : []
+  if (!source.length) return []
+  const sorted = source
+    .filter((it) => String(it?.name || '').trim())
+    .slice()
+    .sort((a, b) => Number(!!b.isImportant) - Number(!!a.isImportant))
+  return sorted.slice(0, 8)
+})
+
+function toggle(it) {
+  store.toggleItem(tripId.value, isReturn.value, it.id)
+  refreshList()
+}
+function toggleDetails() {
+  showDetails.value = !showDetails.value
+}
+async function jumpToGroup(anchorId) {
+  const target = String(anchorId || '')
+  if (!target) return
+  activeGroupAnchor.value = ''
+  await nextTick()
+  activeGroupAnchor.value = target
+}
+function onRowTap(it) {
+  if (Date.now() < suppressTapUntil.value) return
+  toggle(it)
+}
+async function onRowLongPress(it) {
+  suppressTapUntil.value = Date.now() + 500
+  try {
+    uni.vibrateShort({ type: 'medium' })
+  } catch {}
+  const res = await openConfirm({
+    title: '删除物品',
+    message: `确认删除“${it.name}”吗？`,
+    confirmText: '删除',
+    danger: true,
+  })
+  if (!res.confirm) return
+  removeItem(it)
+}
+
+async function finish() {
+  if (isReturn.value) {
+    const res = await openConfirm({
+      title: '确认返程清点完成',
+      message: '确认已完成返程清点并进入待归档吗？',
+      confirmText: '确认完成',
+    })
+    if (!res.confirm) return
+    store.finishReturnCheck(tripId.value)
+    uni.setStorageSync(HOME_AUTO_TAB_KEY, 'archive')
+    uni.showToast({ title: '返程清点完成', icon: 'none' })
+    uni.navigateBack()
+    return
+  }
+  store.finishDepartureCheck(tripId.value)
+  const tips = departureTips()
+  if (!tips.length) {
+    await askDepartureDecision()
+    return
+  }
+  const confirm = await openConfirm({
+    title: '出发前提醒',
+    message: tips.join('；'),
+    confirmText: '继续',
+    cancelText: '取消',
+  })
+  if (!confirm.confirm) return
+  await askDepartureDecision()
+}
+
+function departureTips() {
+  const departureRules = getDepartureRules()
+  const tips = []
+  if (departureRules.outdoorCarry && trip.value?.templateCategory === 'outdoor') {
+    tips.push('请确认已携带身份证、应急药品和充电设备')
+  }
+  if (departureRules.businessRequired && trip.value?.templateCategory === 'business') {
+    const missing = []
+    if (!destinationLabel.value || destinationLabel.value === '未填写') missing.push('目的地')
+    if (!keyTimeLabel.value || keyTimeLabel.value === '未填写') missing.push('关键时间')
+    if (!idTypeLabel.value || idTypeLabel.value === '未填写') missing.push('证件类型')
+    if (missing.length) {
+      tips.push(`商务字段未填写：${missing.join('、')}`)
+    }
+  }
+  if (departureRules.importantUnchecked) {
+    const missingImportant = items.value.filter((it) => !!it.isImportant && !it.isChecked)
+    if (missingImportant.length) {
+      const names = missingImportant
+        .slice(0, 3)
+        .map((it) => it.name)
+        .join('、')
+      tips.push(`重要物品未勾选：${names}${missingImportant.length > 3 ? ' 等' : ''}`)
+    }
+  }
+  return tips
+}
+function getDepartureRules() {
+  try {
+    const raw = uni.getStorageSync(RULES_STORAGE_KEY)
+    if (!raw) return { ...defaultDepartureRules }
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
+    return {
+      ...defaultDepartureRules,
+      ...parsed,
+    }
+  } catch {
+    return { ...defaultDepartureRules }
+  }
+}
+
+async function askDepartureDecision() {
+  const res = await openAction({
+    title: '选择出发状态',
+    actions: ['现在出发', '稍后出发'],
+  })
+  if (res.index < 0) return
+  if (res.index === 0) {
+    store.depart(tripId.value)
+    uni.showToast({ title: '已出发', icon: 'none' })
+  } else {
+    store.markPacked(tripId.value)
+    uni.showToast({ title: '已打包', icon: 'none' })
+  }
+  backToHomeAction()
+}
+function backToHomeAction() {
+  uni.switchTab({
+    url: '/pages/tab-home/index',
+    fail: () => {
+      uni.reLaunch({ url: '/pages/tab-home/index' })
+    },
+  })
+}
+
+async function saveAsTemplate() {
+  const depItems = store.itemsOf(tripId.value, false)
+  const base = depItems.filter((i) => i.isChecked).map((i) => ({ name: i.name, group: i.group }))
+  if (base.length === 0) {
+    uni.showToast({ title: '请先勾选出发清单', icon: 'none' })
+    return
+  }
+  const res = await openPrompt({
+    title: '保存为模板',
+    placeholder: '输入模板名称',
+    modelValue: '我的模板',
+    confirmText: '保存',
+  })
+  if (!res.confirm) return
+  const t = tplStore.addTemplate(res.value.trim() || '我的模板')
+  for (const it of base) tplStore.addItem(t.id, it)
+  uni.showToast({ title: '已保存到模板库', icon: 'none' })
+}
+
+function addQuickItem(pick) {
+  const name = String(pick?.name || '').trim()
+  const group = String(pick?.group || '').trim() || '其他'
+  if (!name) return
+  const existed = items.value.find((it) => it.name === name && String(it.group || '其他') === group)
+  if (existed) {
+    store.updateItemMeta(tripId.value, isReturn.value, existed.id, { quantity: itemQty(existed) + 1 })
+    refreshList()
+    uni.showToast({ title: `已增加 ${name} 数量`, icon: 'none' })
+    return
+  }
+  store.addCustomItemToTrip(tripId.value, isReturn.value, {
+    name,
+    group,
+    isConsumable: !!pick?.isConsumable,
+    isImportant: !!pick?.isImportant,
+  })
+  ensureGearItem(name, group, !!pick?.isConsumable, !!pick?.isImportant)
+  refreshList()
+  uni.showToast({ title: `已添加 ${name}`, icon: 'none' })
+}
+
+async function addCustomItem() {
+  const nameRes = await openPrompt({
+    title: '添加物品',
+    placeholder: '输入物品名称',
+    confirmText: '下一步',
+  })
+  if (!nameRes.confirm) return
+  const name = nameRes.value.trim()
+  if (!name) {
+    uni.showToast({ title: '请输入物品名称', icon: 'none' })
+    return
+  }
+  const groupRes = await openPrompt({
+    title: '物品分组',
+    placeholder: '输入分组，如电子/证件',
+    modelValue: '其他',
+    confirmText: '确认添加',
+  })
+  if (!groupRes.confirm) return
+  const group = groupRes.value.trim() || '其他'
+  store.addCustomItemToTrip(tripId.value, isReturn.value, { name, group, isConsumable: false })
+  ensureGearItem(name, group, false, false)
+  refreshList()
+}
+
+function removeItem(it) {
+  store.removeItemFromTrip(tripId.value, isReturn.value, it.id)
+  refreshList()
+}
+function ensureGearItem(name, group = '其他', isConsumable = false, isImportant = false) {
+  const normalizedName = String(name || '').trim()
+  const normalizedGroup = String(group || '').trim() || '其他'
+  if (!normalizedName) return
+  const exists = (gearStore.items || []).some(
+    (it) => String(it?.name || '').trim() === normalizedName && String(it?.group || '其他').trim() === normalizedGroup,
+  )
+  if (exists) return
+  gearStore.add(normalizedName, normalizedGroup, { isConsumable: !!isConsumable, isImportant: !!isImportant })
+}
+function itemQty(item) {
+  const qty = Number(item?.quantity || 1)
+  return Number.isFinite(qty) && qty > 0 ? Math.round(qty) : 1
+}
+async function openItemActions(item) {
+  const consumableLabel = item?.isConsumable ? '取消消耗品' : '标记为消耗品'
+  const res = await openAction({
+    title: item?.name || '物品操作',
+    actions: ['增加数量', '减少数量', '设置估重', consumableLabel],
+  })
+  if (res.index < 0) return
+  if (res.index === 0) {
+    increaseQty(item)
+    return
+  }
+  if (res.index === 1) {
+    decreaseQty(item)
+    return
+  }
+  if (res.index === 2) {
+    await pickWeight(item)
+    return
+  }
+  if (res.index === 3) {
+    store.updateItemMeta(tripId.value, isReturn.value, item.id, { isConsumable: !item?.isConsumable })
+    refreshList()
+  }
+}
+function increaseQty(item) {
+  const next = itemQty(item) + 1
+  store.updateItemMeta(tripId.value, isReturn.value, item.id, { quantity: next })
+  refreshList()
+}
+function decreaseQty(item) {
+  const next = Math.max(1, itemQty(item) - 1)
+  store.updateItemMeta(tripId.value, isReturn.value, item.id, { quantity: next })
+  refreshList()
+}
+async function pickWeight(item) {
+  const options = ['很轻 0.1kg', '轻 0.3kg', '中 0.8kg', '重 1.5kg', '很重 3kg', '清空估重']
+  const values = [0.1, 0.3, 0.8, 1.5, 3, null]
+  const res = await openAction({
+    title: '选择估重',
+    actions: options,
+  })
+  if (res.index < 0) return
+  const value = values[res.index]
+  store.updateItemMeta(tripId.value, isReturn.value, item.id, { weight: value })
+  refreshList()
+}
+function refreshList() {
+  list.value = store.itemsOf(tripId.value, isReturn.value)
+}
+function openBagPicker() {
+  draftBagIds.value = [...tripBagIds.value]
+  showBagPicker.value = true
+}
+function toggleDraftBag(id) {
+  if (draftBagIds.value.includes(id)) {
+    draftBagIds.value = draftBagIds.value.filter((item) => item !== id)
+  } else {
+    draftBagIds.value = [...draftBagIds.value, id]
+  }
+}
+function saveTripBags() {
+  store.setTripBags(tripId.value, draftBagIds.value)
+  showBagPicker.value = false
+  refreshList()
+}
+function openConfirm(options) {
+  return openDialog({
+    mode: 'confirm',
+    title: options?.title || '',
+    message: options?.message || '',
+    confirmText: options?.confirmText || '确认',
+    cancelText: options?.cancelText || '取消',
+    danger: !!options?.danger,
+    closeOnMask: options?.closeOnMask !== false,
+  })
+}
+function openPrompt(options) {
+  return openDialog({
+    mode: 'prompt',
+    title: options?.title || '',
+    message: options?.message || '',
+    confirmText: options?.confirmText || '确认',
+    cancelText: options?.cancelText || '取消',
+    placeholder: options?.placeholder || '',
+    modelValue: options?.modelValue || '',
+    closeOnMask: options?.closeOnMask !== false,
+  })
+}
+function openAction(options) {
+  return openDialog({
+    mode: 'action',
+    title: options?.title || '',
+    message: options?.message || '',
+    actions: options?.actions || [],
+    closeOnMask: options?.closeOnMask !== false,
+  })
+}
+function openDialog(payload) {
+  return new Promise((resolve) => {
+    dialogResolver = resolve
+    dialogState.value = {
+      visible: true,
+      mode: payload.mode || 'confirm',
+      title: payload.title || '',
+      message: payload.message || '',
+      confirmText: payload.confirmText || '确认',
+      cancelText: payload.cancelText || '取消',
+      placeholder: payload.placeholder || '',
+      modelValue: payload.modelValue || '',
+      danger: !!payload.danger,
+      closeOnMask: payload.closeOnMask !== false,
+      actions: Array.isArray(payload.actions) ? payload.actions : [],
+    }
+  })
+}
+function closeDialog(result) {
+  const resolve = dialogResolver
+  dialogResolver = null
+  dialogState.value = {
+    ...dialogState.value,
+    visible: false,
+  }
+  if (resolve) resolve(result)
+}
+function onDialogCancel() {
+  closeDialog({ confirm: false, index: -1, value: '' })
+}
+function onDialogConfirm(value) {
+  closeDialog({ confirm: true, index: -1, value: String(value || '') })
+}
+function onDialogAction(index) {
+  closeDialog({ confirm: true, index: Number(index), value: '' })
+}
+</script>
+
+<style scoped>
+.page {
+  height: 100vh;
+  background:
+    radial-gradient(circle at 15% 8%, rgba(10, 128, 255, 0.28), transparent 34%),
+    linear-gradient(180deg, #040a16 0%, #050d1f 52%, #071020 100%);
+  color: #f8fbff;
+  padding: 18px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.meta-card {
+  background: rgba(10, 28, 50, 0.58);
+  border: 1px solid rgba(118, 171, 255, 0.2);
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.meta-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.title-line {
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.detail-panel {
+  margin-top: 8px;
+}
+.group-progress-wrap {
+  margin-top: 8px;
+}
+.group-progress-scroll {
+  width: 100%;
+  white-space: nowrap;
+}
+.group-progress-list {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 12px;
+}
+.group-progress-pill {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #dbeafe;
+  border: 1px solid rgba(125, 211, 252, 0.45);
+  background: rgba(30, 64, 175, 0.34);
+  border-radius: 999px;
+  padding: 5px 10px;
+  transition: transform 0.15s ease;
+}
+.group-progress-pill:active {
+  transform: scale(0.97);
+}
+.group-progress-pill.done {
+  color: #dcfce7;
+  border-color: rgba(74, 222, 128, 0.58);
+  background: rgba(21, 128, 61, 0.35);
+}
+.group-progress-name {
+  max-width: 140rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.group-progress-value {
+  font-weight: 600;
+}
+.detail-toggle {
+  font-size: 12px;
+  color: #bae6fd;
+  border: 1px solid rgba(125, 211, 252, 0.45);
+  background: rgba(14, 116, 144, 0.2);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+.meta-card.compact {
+  padding-bottom: 10px;
+}
+
+.badge {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: #cde9ff;
+  border: 1px solid rgba(56, 189, 248, 0.45);
+}
+
+.progress {
+  color: rgba(202, 223, 255, 0.72);
+  font-size: 12px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.meta-grid {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.meta {
+  color: rgba(205, 224, 255, 0.82);
+  font-size: 12px;
+}
+.bag-bar {
+  margin-top: 10px;
+  border-top: 1px solid rgba(118, 171, 255, 0.14);
+  padding-top: 10px;
+}
+.bag-label {
+  font-size: 12px;
+  color: rgba(205, 224, 255, 0.82);
+}
+.bag-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.bag-pill {
+  font-size: 11px;
+  color: rgba(205, 233, 255, 0.92);
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(125, 211, 252, 0.4);
+  background: rgba(14, 116, 144, 0.18);
+}
+.bag-pill.active {
+  color: #f8fbff;
+  border-color: rgba(56, 189, 248, 0.78);
+  background: rgba(14, 116, 144, 0.35);
+}
+.bag-empty {
+  color: rgba(205, 224, 255, 0.62);
+  font-size: 12px;
+}
+.bag-btn {
+  margin-top: 8px;
+  background: rgba(8, 21, 40, 0.72);
+  color: rgba(215, 233, 255, 0.92);
+  border: 1px solid rgba(118, 171, 255, 0.28);
+  border-radius: 999px;
+}
+.drag-tip {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #e0f2fe;
+  background: rgba(2, 132, 199, 0.2);
+  border: 1px solid rgba(125, 211, 252, 0.45);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.weight-bar {
+  margin-top: 10px;
+  border-top: 1px solid rgba(118, 171, 255, 0.14);
+  padding-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.weight-text {
+  font-size: 12px;
+  color: rgba(205, 224, 255, 0.92);
+}
+.weight-sub {
+  font-size: 11px;
+  color: rgba(205, 224, 255, 0.62);
+}
+
+.item-pane {
+  flex: 1;
+  min-height: 0;
+}
+.item-scroll {
+  height: 100%;
+}
+
+.empty {
+  color: rgba(205, 224, 255, 0.62);
+  text-align: center;
+  padding: 24px 0;
+}
+
+.group {
+  margin-top: 12px;
+}
+
+.g-title {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: inline-block;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(125, 211, 252, 0.35);
+  background: rgba(7, 19, 38, 0.9);
+  backdrop-filter: blur(4px);
+  margin-bottom: 6px;
+  color: #d8ebff;
+}
+
+.row {
+  background: rgba(10, 28, 50, 0.52);
+  border: 1px solid rgba(118, 171, 255, 0.18);
+  padding: 12px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.name-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pick-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(125, 211, 252, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  background: rgba(8, 21, 40, 0.62);
+}
+.pick-dot.picked {
+  color: #f7fbff;
+  background: rgba(14, 116, 144, 0.45);
+}
+
+.name {
+  font-size: 14px;
+}
+
+.r {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.qty-tag {
+  font-size: 10px;
+  color: #bfdbfe;
+  background: rgba(30, 58, 138, 0.3);
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+.more-tag {
+  font-size: 10px;
+  color: #bae6fd;
+  background: rgba(3, 105, 161, 0.4);
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.footer {
+  flex-shrink: 0;
+  padding: 12px 0 18px;
+  background: linear-gradient(180deg, rgba(7, 16, 32, 0), rgba(7, 16, 32, 0.94) 36%);
+}
+
+.quick-add {
+  margin-bottom: 8px;
+}
+
+.quick-label {
+  display: block;
+  font-size: 12px;
+  color: rgba(186, 230, 253, 0.92);
+  margin-bottom: 6px;
+}
+
+.quick-scroll {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.quick-list {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 12px;
+}
+
+.quick-pill {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: #dbeafe;
+  background: rgba(30, 64, 175, 0.34);
+  border: 1px solid rgba(125, 211, 252, 0.45);
+  border-radius: 999px;
+  padding: 6px 10px;
+}
+
+.btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.primary {
+  margin-top: 8px;
+  width: 100%;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+}
+
+.ghost {
+  width: 100%;
+  margin: 0;
+  background: rgba(118, 171, 255, 0.18);
+  color: #dceeff;
+  border: 1px solid rgba(118, 171, 255, 0.28);
+  border-radius: 12px;
+}
+.mask {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(2, 6, 23, 0.68);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 18px;
+  box-sizing: border-box;
+}
+.sheet {
+  width: 100%;
+  max-width: 560rpx;
+  border-radius: 14px;
+  padding: 14px 14px 18px;
+  border: 1px solid rgba(118, 171, 255, 0.26);
+  background:
+    radial-gradient(circle at 20% 0%, rgba(14, 165, 233, 0.2), transparent 36%),
+    rgba(7, 19, 38, 0.96);
+}
+.sheet-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f8fbff;
+}
+.sheet-list {
+  max-height: 36vh;
+  margin-top: 8px;
+}
+.sheet-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(118, 171, 255, 0.16);
+  color: rgba(215, 233, 255, 0.92);
+}
+.sheet-check {
+  min-width: 76rpx;
+  text-align: center;
+  font-size: 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(118, 171, 255, 0.32);
+  color: #bae6fd;
+  background: rgba(22, 78, 178, 0.28);
+  padding: 2px 8px;
+}
+.sheet-check.checked {
+  border-color: rgba(34, 197, 94, 0.34);
+  color: #dcfce7;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.7), rgba(22, 163, 74, 0.84));
+}
+.sheet-btn {
+  margin-top: 12px;
+  width: 100%;
+  background: linear-gradient(135deg, #0ea5e9, #2563eb);
+  color: #f8fbff;
+  border: none;
+  border-radius: 12px;
+}
+.page.theme-day .mask {
+  background: rgba(151, 183, 220, 0.34);
+}
+.page.theme-day .sheet {
+  border-color: rgba(152, 191, 255, 0.42);
+  background:
+    radial-gradient(circle at 18% 0%, rgba(147, 197, 253, 0.24), transparent 38%),
+    rgba(255, 255, 255, 0.97);
+}
+.page.theme-day .sheet-title {
+  color: #133b74;
+}
+.page.theme-day .sheet-item {
+  border-bottom-color: rgba(152, 191, 255, 0.36);
+  color: rgba(30, 58, 138, 0.92);
+}
+.page.theme-day .sheet-check {
+  border-color: rgba(147, 197, 253, 0.66);
+  color: #2563eb;
+  background: rgba(239, 246, 255, 0.96);
+}
+.page.theme-day .sheet-check.checked {
+  border-color: rgba(59, 130, 246, 0.38);
+  color: #f8fbff;
+  background: linear-gradient(135deg, #1da1ff, #2563eb);
+}
+.page.theme-day .sheet-btn {
+  background: linear-gradient(135deg, #1da1ff, #2563eb);
+}
+.page.theme-day {
+  background:
+    radial-gradient(circle at 14% 8%, rgba(125, 211, 252, 0.26), transparent 34%),
+    linear-gradient(180deg, #eff8ff 0%, #f6fbff 58%, #f8fcff 100%);
+  color: #133b74;
+}
+.page.theme-day .meta-card,
+.page.theme-day .row {
+  background: rgba(255, 255, 255, 0.96);
+  border-color: rgba(191, 219, 254, 0.95);
+  box-shadow: 0 8px 20px rgba(148, 163, 184, 0.12);
+}
+.page.theme-day .badge {
+  color: #1d4ed8;
+  border-color: rgba(96, 165, 250, 0.68);
+  background: rgba(239, 246, 255, 0.92);
+}
+.page.theme-day .detail-toggle {
+  color: #1d4ed8;
+  border-color: rgba(147, 197, 253, 0.9);
+  background: rgba(239, 246, 255, 0.96);
+}
+.page.theme-day .group-progress-pill {
+  color: #1e40af;
+  border-color: rgba(147, 197, 253, 0.9);
+  background: rgba(239, 246, 255, 0.96);
+}
+.page.theme-day .group-progress-pill.done {
+  color: #166534;
+  border-color: rgba(134, 239, 172, 0.9);
+  background: rgba(220, 252, 231, 0.92);
+}
+.page.theme-day .progress,
+.page.theme-day .meta,
+.page.theme-day .bag-label,
+.page.theme-day .weight-text {
+  color: rgba(30, 64, 175, 0.86);
+}
+.page.theme-day .bag-bar,
+.page.theme-day .weight-bar {
+  border-top-color: rgba(191, 219, 254, 0.9);
+}
+.page.theme-day .weight-sub,
+.page.theme-day .bag-empty,
+.page.theme-day .empty {
+  color: rgba(100, 116, 139, 0.9);
+}
+.page.theme-day .bag-pill {
+  color: #1e40af;
+  border-color: rgba(147, 197, 253, 0.9);
+  background: rgba(239, 246, 255, 0.98);
+}
+.page.theme-day .bag-pill.active {
+  color: #f8fbff;
+  border-color: rgba(59, 130, 246, 0.7);
+  background: linear-gradient(135deg, #1da1ff, #2563eb);
+}
+.page.theme-day .bag-btn,
+.page.theme-day .ghost {
+  color: #1e40af;
+  border-color: rgba(147, 197, 253, 0.88);
+  background: rgba(239, 246, 255, 0.94);
+}
+.page.theme-day .drag-tip {
+  color: #1e3a8a;
+  border-color: rgba(125, 211, 252, 0.72);
+  background: rgba(224, 242, 254, 0.8);
+}
+.page.theme-day .g-title,
+.page.theme-day .name {
+  color: #1e3a8a;
+}
+.page.theme-day .g-title {
+  border-color: rgba(147, 197, 253, 0.9);
+  background: rgba(255, 255, 255, 0.94);
+}
+.page.theme-day .qty-tag {
+  color: #1e40af;
+  background: rgba(224, 231, 255, 0.92);
+}
+.page.theme-day .more-tag {
+  color: #1d4ed8;
+  background: rgba(219, 234, 254, 0.92);
+}
+.page.theme-day .quick-label {
+  color: #1d4ed8;
+}
+.page.theme-day .quick-pill {
+  color: #1e40af;
+  border-color: rgba(147, 197, 253, 0.86);
+  background: rgba(239, 246, 255, 0.96);
+}
+.page.theme-day .primary {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #f8fbff;
+}
+.page.theme-day .footer {
+  background: linear-gradient(180deg, rgba(248, 252, 255, 0), rgba(248, 252, 255, 0.98) 38%);
+}
+</style>

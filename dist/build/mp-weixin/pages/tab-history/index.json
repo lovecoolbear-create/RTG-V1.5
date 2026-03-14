@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "历史",
+  "usingComponents": {
+    "dark-dialog": "../../components/DarkDialog"
+  }
+}
