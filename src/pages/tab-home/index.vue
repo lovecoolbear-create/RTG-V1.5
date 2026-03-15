@@ -24,7 +24,7 @@
           <view class="week-row">
             <text v-for="w in weekLabels" :key="w" class="week-item">{{ w }}</text>
           </view>
-          <view class="calendar-scroll">
+          <scroll-view scroll-y class="calendar-scroll">
             <view class="days-grid">
               <view
                 v-for="d in calendarDays"
@@ -36,7 +36,7 @@
                 <text>{{ d.day }}</text>
               </view>
             </view>
-          </view>
+          </scroll-view>
         </view>
       </view>
       <view

@@ -34,19 +34,19 @@
           <text class="meta">关键时间：{{ keyTimeLabel }}</text>
           <text class="meta">证件类型：{{ idTypeLabel }}</text>
         </view>
-        <view class="bag-bar">
-          <view class="bag-label">本次箱包</view>
-          <view class="bag-values">
-            <text v-if="activeTripBags.length === 0" class="bag-empty">未选择</text>
-            <text v-for="bag in activeTripBags" :key="bag.id" class="bag-pill">{{ bag.name }}</text>
-          </view>
-          <view class="drag-tip">长按清单卡片可删除</view>
-          <button size="mini" class="bag-btn" @tap="openBagPicker">选择箱包</button>
+      </view>
+      <view class="bag-bar">
+        <view class="bag-label">本次箱包</view>
+        <view class="bag-values">
+          <text v-if="activeTripBags.length === 0" class="bag-empty">未选择</text>
+          <text v-for="bag in activeTripBags" :key="bag.id" class="bag-pill">{{ bag.name }}</text>
         </view>
-        <view class="weight-bar">
-          <text class="weight-text">已估总重 {{ estimatedWeightLabel }}</text>
-          <text class="weight-sub">未估重 {{ unweightedCount }} 件</text>
-        </view>
+        <view class="drag-tip">长按清单卡片可放入箱包或删除</view>
+        <button size="mini" class="bag-btn" @tap="openBagPicker">选择箱包</button>
+      </view>
+      <view class="weight-bar">
+        <text class="weight-text">已估总重 {{ estimatedWeightLabel }}</text>
+        <text class="weight-sub">未估重 {{ unweightedCount }} 件</text>
       </view>
     </view>
 
@@ -64,6 +64,7 @@
           >
             <view class="name-wrap">
               <text class="name">{{ it.name }}</text>
+              <text v-if="itemBagName(it)" class="bag-tag">{{ itemBagName(it) }}</text>
             </view>
             <view class="r">
               <text class="qty-tag">x{{ itemQty(it) }}</text>
@@ -281,14 +282,7 @@ async function onRowLongPress(it) {
   try {
     uni.vibrateShort({ type: 'medium' })
   } catch {}
-  const res = await openConfirm({
-    title: '删除物品',
-    message: `确认删除“${it.name}”吗？`,
-    confirmText: '删除',
-    danger: true,
-  })
-  if (!res.confirm) return
-  removeItem(it)
+  await openBagAssignActions(it)
 }
 
 async function finish() {
@@ -474,7 +468,7 @@ async function openItemActions(item) {
   const consumableLabel = item?.isConsumable ? '取消消耗品' : '标记为消耗品'
   const res = await openAction({
     title: item?.name || '物品操作',
-    actions: ['增加数量', '减少数量', '设置估重', consumableLabel],
+    actions: ['增加数量', '减少数量', '设置估重', consumableLabel, '放入箱包'],
   })
   if (res.index < 0) return
   if (res.index === 0) {
@@ -492,7 +486,75 @@ async function openItemActions(item) {
   if (res.index === 3) {
     store.updateItemMeta(tripId.value, isReturn.value, item.id, { isConsumable: !item?.isConsumable })
     refreshList()
+    return
   }
+  if (res.index === 4) {
+    await openBagAssignActions(item)
+  }
+}
+function itemBagName(item) {
+  const id = String(item?.bagId || '')
+  if (!id) return ''
+  const bag = activeTripBags.value.find((it) => String(it?.id || '') === id)
+  return bag?.name ? `已放入 ${bag.name}` : '已放入已删除箱包'
+}
+async function openBagAssignActions(item) {
+  if (!item?.id) return
+  const currentBag = itemBagName(item)
+  if (activeTripBags.value.length === 0) {
+    const emptyRes = await openAction({
+      title: item?.name || '箱包分配',
+      message: '请先选择本次携带箱包',
+      actions: ['去选择箱包', '删除物品'],
+    })
+    if (emptyRes.index === 0) {
+      openBagPicker()
+      return
+    }
+    if (emptyRes.index === 1) {
+      await confirmRemoveItem(item)
+    }
+    return
+  }
+  const bagActions = activeTripBags.value.map((bag) => `拖入「${bag.name}」`)
+  const actions = [...bagActions]
+  if (String(item?.bagId || '')) actions.push('移出箱包')
+  actions.push('删除物品')
+  const res = await openAction({
+    title: item?.name || '箱包分配',
+    message: currentBag || '当前未放入箱包',
+    actions,
+  })
+  if (res.index < 0) return
+  if (res.index < bagActions.length) {
+    const targetBag = activeTripBags.value[res.index]
+    if (!targetBag?.id) return
+    store.assignBagForItems(tripId.value, isReturn.value, [item.id], targetBag.id)
+    refreshList()
+    uni.showToast({ title: `已放入${targetBag.name}`, icon: 'none' })
+    return
+  }
+  const removeIndex = bagActions.length
+  const deleteIndex = actions.length - 1
+  if (String(item?.bagId || '') && res.index === removeIndex) {
+    store.assignBagForItems(tripId.value, isReturn.value, [item.id], '')
+    refreshList()
+    uni.showToast({ title: '已移出箱包', icon: 'none' })
+    return
+  }
+  if (res.index === deleteIndex) {
+    await confirmRemoveItem(item)
+  }
+}
+async function confirmRemoveItem(item) {
+  const res = await openConfirm({
+    title: '删除物品',
+    message: `确认删除“${item?.name || '该物品'}”吗？`,
+    confirmText: '删除',
+    danger: true,
+  })
+  if (!res.confirm) return
+  removeItem(item)
 }
 function increaseQty(item) {
   const next = itemQty(item) + 1
@@ -860,6 +922,14 @@ function onDialogAction(index) {
 .name {
   font-size: 14px;
 }
+.bag-tag {
+  font-size: 10px;
+  color: #e0f2fe;
+  border: 1px solid rgba(125, 211, 252, 0.42);
+  background: rgba(8, 47, 73, 0.55);
+  border-radius: 999px;
+  padding: 2px 6px;
+}
 
 .r {
   display: flex;
@@ -1106,6 +1176,11 @@ function onDialogAction(index) {
 .page.theme-day .g-title,
 .page.theme-day .name {
   color: #1e3a8a;
+}
+.page.theme-day .bag-tag {
+  color: #1d4ed8;
+  border-color: rgba(147, 197, 253, 0.88);
+  background: rgba(239, 246, 255, 0.98);
 }
 .page.theme-day .g-title {
   border-color: rgba(147, 197, 253, 0.9);
