@@ -40,6 +40,7 @@
             @tap="selectDay(d)"
           >
             <text class="day-text">{{ d.day }}</text>
+            <view v-if="d.hasTrip" class="trip-dot"></view>
           </view>
         </view>
       </view>
@@ -266,6 +267,11 @@ const todayText = computed(() => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 })
 
+// 获取指定日期是否有行程
+const hasTripOnDate = (dateStr) => {
+  return store.allTrips?.some(t => t.date === dateStr && t.status !== 'archived')
+}
+
 const calendarDays = computed(() => {
   const y = displayedMonth.value.getFullYear()
   const m = displayedMonth.value.getMonth()
@@ -278,7 +284,13 @@ const calendarDays = computed(() => {
     arr.push({ key: `p-${i}`, day: prevTotal - first + i + 1, inMonth: false })
   }
   for (let day = 1; day <= total; day++) {
-    arr.push({ key: `d-${day}`, day, inMonth: true })
+    const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    arr.push({ 
+      key: `d-${day}`, 
+      day, 
+      inMonth: true,
+      hasTrip: hasTripOnDate(dateStr)
+    })
   }
   while (arr.length < 42) {
     arr.push({ key: `n-${arr.length}`, day: arr.length - total - first + 1, inMonth: false })
@@ -295,13 +307,11 @@ const currentDate = computed(() => {
 
 const filteredOngoing = computed(() => {
   return ongoing.value
-    .filter(t => t.date === currentDate.value)
     .sort((a, b) => scheduleOrder(a) - scheduleOrder(b))
 })
 
 const filteredToArchive = computed(() => {
   return toArchive.value
-    .filter(t => t.date === currentDate.value)
     .sort((a, b) => scheduleOrder(a) - scheduleOrder(b))
 })
 
@@ -760,6 +770,20 @@ async function fetchWeather() {
 
 .day-cell.muted .day-text {
   opacity: 0.3;
+}
+
+/* 日历行程标记 */
+.trip-dot {
+  width: 8rpx;
+  height: 8rpx;
+  border-radius: 50%;
+  background-color: #10b981;
+  position: absolute;
+  bottom: 8rpx;
+}
+
+.day-cell {
+  position: relative;
 }
 
 /* 分隔线 */
