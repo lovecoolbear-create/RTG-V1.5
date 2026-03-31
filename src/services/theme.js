@@ -12,9 +12,6 @@ function applyNativeTheme(mode) {
   const day = mode === 'day'
   const navBackground = day ? '#dcecff' : '#040a16'
   const navFront = day ? '#000000' : '#ffffff'
-  const tabBackground = day ? '#eaf3ff' : '#071020'
-  const tabColor = day ? '#4b6b93' : '#9bb0cb'
-  const tabSelected = day ? '#1f4ea3' : '#f7fbff'
   uni.setStorageSync(THEME_STORAGE_KEY, mode)
   uni.setNavigationBarColor({
     frontColor: navFront,
@@ -24,14 +21,7 @@ function applyNativeTheme(mode) {
       timingFunc: 'easeIn',
     },
   })
-  if (typeof uni.setTabBarStyle === 'function') {
-    uni.setTabBarStyle({
-      color: tabColor,
-      selectedColor: tabSelected,
-      backgroundColor: tabBackground,
-      borderStyle: day ? 'white' : 'black',
-    })
-  }
+  // TabBar style removed to prevent errors
 }
 
 export function readThemeMode() {

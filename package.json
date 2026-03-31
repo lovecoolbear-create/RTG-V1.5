@@ -11,7 +11,6 @@
   "dependencies": {
     "@dcloudio/uni-app": "3.0.0-4080720251210001",
     "@dcloudio/uni-cli-i18n": "2.0.2-4080720251210002",
-    "@dcloudio/uni-cli-shared": "3.0.0-4080720251210001",
     "@dcloudio/uni-mp-weixin": "3.0.0-4080720251210001",
     "@dcloudio/uni-shared": "3.0.0-4080720251210001",
     "@dcloudio/uni-ui": "^1.5.11",
@@ -20,6 +19,9 @@
     "vue": "^3.4.38"
   },
   "devDependencies": {
+    "@dcloudio/types": "^3.4.30",
+    "@dcloudio/uni-automator": "^2.0.2-5000520260324002",
+    "@dcloudio/uni-cli-shared": "^3.0.0-4080720251210001",
     "sass": "^1.98.0",
     "semver": "^7.6.3",
     "vite": "^4.5.5",

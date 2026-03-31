@@ -91,10 +91,11 @@
     }
   },
   "tabBar": {
-    "color": "#9bb0cb",
-    "selectedColor": "#f7fbff",
-    "backgroundColor": "#071020",
-    "borderStyle": "black",
+    "custom": true,
+    "color": "#64748b",
+    "selectedColor": "#059669",
+    "backgroundColor": "#f8fbf9",
+    "borderStyle": "white",
     "list": [
       { "pagePath": "pages/tab-home/index", "text": "日历" },
       { "pagePath": "pages/tab-gear/index", "text": "装备库" },

@@ -177,6 +177,9 @@ onLoad((options) => {
   mode.value = options?.mode || 'departure'
   if (!isReturn.value) {
     store.beginPacking(tripId.value)
+  } else {
+    // 返程模式：确保返程物品列表已初始化
+    store.startReturnIfNeeded(tripId.value)
   }
   refreshList()
 })

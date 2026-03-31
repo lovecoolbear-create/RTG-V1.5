@@ -1,0 +1,45 @@
+.tab-bar {
+  display: flex;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(100rpx + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  background: linear-gradient(180deg, #040a16 0%, #071020 100%);
+  border-top: 1rpx solid rgba(118, 171, 255, 0.15);
+  z-index: 999;
+}
+
+.tab-bar-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  color: #ffffff;
+  transition: all 0.3s ease;
+}
+
+.tab-bar-item.active {
+  color: #10b981;
+}
+
+.tab-text {
+  font-size: 24rpx;
+  font-weight: 500;
+}
+
+/* 日间模式 */
+.tab-bar.theme-day {
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+  border-top: 1rpx solid rgba(0, 0, 0, 0.08);
+}
+
+.tab-bar.theme-day .tab-bar-item {
+  color: #64748b;
+}
+
+.tab-bar.theme-day .tab-bar-item.active {
+  color: #059669;
+}
