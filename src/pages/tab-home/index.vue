@@ -269,7 +269,7 @@ const todayText = computed(() => {
 
 // 获取指定日期是否有行程
 const hasTripOnDate = (dateStr) => {
-  return store.allTrips?.some(t => t.date === dateStr && t.status !== 'archived')
+  return store.trips?.some(t => t.date === dateStr && t.status !== 'archived')
 }
 
 const calendarDays = computed(() => {
@@ -286,7 +286,7 @@ const calendarDays = computed(() => {
   for (let day = 1; day <= total; day++) {
     const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     // 直接在这里检查是否有行程，确保响应式
-    const hasTrip = store.allTrips?.some(t => t.date === dateStr && t.status !== 'archived')
+    const hasTrip = store.trips?.some(t => t.date === dateStr && t.status !== 'archived')
     arr.push({ 
       key: `d-${day}`, 
       day, 
@@ -319,7 +319,7 @@ const filteredToArchive = computed(() => {
 
 const completedThisMonth = computed(() => {
   const now = new Date()
-  return store.allTrips?.filter(t => {
+  return store.trips?.filter(t => {
     if (t.status !== 'archived') return false
     const tripDate = new Date(t.date)
     return tripDate.getMonth() === now.getMonth() && tripDate.getFullYear() === now.getFullYear()
