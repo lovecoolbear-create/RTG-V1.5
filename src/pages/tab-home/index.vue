@@ -446,6 +446,20 @@ function onTripTap(t) {
   uni.navigateTo({ url: `/pages/trip-checklist/index?id=${t.id}&mode=departure` })
 }
 
+function onTripLongPress(t) {
+  openConfirm({
+    title: '删除行程',
+    message: `确定要删除"${t.title}"这个行程吗？`,
+    confirmText: '删除',
+    cancelText: '取消'
+  }).then((res) => {
+    if (res.confirm) {
+      store.deleteTrip(t.id)
+      uni.showToast({ title: '已删除', icon: 'success' })
+    }
+  })
+}
+
 function toggleCalendar() {
   isCalendarCollapsed.value = !isCalendarCollapsed.value
 }
