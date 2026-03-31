@@ -273,6 +273,9 @@ const hasTripOnDate = (dateStr) => {
 }
 
 const calendarDays = computed(() => {
+  // 依赖 store.allTrips 以确保行程变化时日历标记更新
+  const trips = store.allTrips
+  
   const y = displayedMonth.value.getFullYear()
   const m = displayedMonth.value.getMonth()
   const first = new Date(y, m, 1).getDay()
