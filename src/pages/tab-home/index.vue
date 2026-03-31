@@ -366,13 +366,14 @@ async function quickDepartWithTemplate() {
     return
   }
   
-  // Show template selection action sheet
+  // Show template selection dialog using DarkDialog
   const templateNames = templates.map(t => t.name)
-  uni.showActionSheet({
+  openAction({
     title: '选择模板',
-    itemList: templateNames,
-    success: (res) => {
-      const selectedTemplate = templates[res.tapIndex]
+    actions: templateNames,
+  }).then((res) => {
+    if (res.index >= 0) {
+      const selectedTemplate = templates[res.index]
       const trip = store.createTripFromTemplate(selectedTemplate, {
         title: selectedTemplate.name,
         date: currentDate.value,
