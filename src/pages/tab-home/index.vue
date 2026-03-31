@@ -781,10 +781,17 @@ async function fetchWeather() {
   border-radius: 50%;
   background-color: #10b981;
   position: absolute;
-  bottom: 8rpx;
+  bottom: 12rpx;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .day-cell {
+  width: 14.28%;
+  height: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   position: relative;
 }
 
