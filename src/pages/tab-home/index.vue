@@ -118,6 +118,7 @@
             :key="t.id" 
             class="trip-item"
             @tap="onTripTap(t)"
+            @longpress.stop="onTripLongPress(t)"
           >
             <view class="trip-status-bar">
               <view
@@ -160,6 +161,7 @@
             :key="t.id" 
             class="trip-item"
             @tap="onTripTap(t)"
+            @longpress.stop="onTripLongPress(t)"
           >
             <view class="trip-status-bar">
               <view
