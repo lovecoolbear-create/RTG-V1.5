@@ -1,6 +1,0 @@
-{
-  "navigationBarTitleText": "清单",
-  "usingComponents": {
-    "dark-dialog": "../../components/DarkDialog"
-  }
-}
