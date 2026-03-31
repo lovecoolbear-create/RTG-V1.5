@@ -273,9 +273,6 @@ const hasTripOnDate = (dateStr) => {
 }
 
 const calendarDays = computed(() => {
-  // 依赖 store.allTrips 以确保行程变化时日历标记更新
-  const trips = store.allTrips
-  
   const y = displayedMonth.value.getFullYear()
   const m = displayedMonth.value.getMonth()
   const first = new Date(y, m, 1).getDay()
@@ -288,11 +285,13 @@ const calendarDays = computed(() => {
   }
   for (let day = 1; day <= total; day++) {
     const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    // 直接在这里检查是否有行程，确保响应式
+    const hasTrip = store.allTrips?.some(t => t.date === dateStr && t.status !== 'archived')
     arr.push({ 
       key: `d-${day}`, 
       day, 
       inMonth: true,
-      hasTrip: hasTripOnDate(dateStr)
+      hasTrip
     })
   }
   while (arr.length < 42) {
