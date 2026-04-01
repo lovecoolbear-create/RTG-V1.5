@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { PRESET_TEMPLATES, generateUserTemplate, getTemplatesByCategory, TEMPLATE_CATEGORIES } from './preset-templates.js'
 
 function get(key, def) {
   try {
@@ -17,6 +18,21 @@ function set(key, val) {
 
 function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
+}
+
+// 获取已导入的预设模板ID列表
+const IMPORTED_PRESETS_KEY = 'rtg_imported_presets'
+
+function getImportedPresets() {
+  return get(IMPORTED_PRESETS_KEY, [])
+}
+
+function markPresetImported(presetId) {
+  const imported = getImportedPresets()
+  if (!imported.includes(presetId)) {
+    imported.push(presetId)
+    set(IMPORTED_PRESETS_KEY, imported)
+  }
 }
 
 const DEFAULTS = [
@@ -150,6 +166,57 @@ export const useTemplateStore = defineStore('templates', {
         this.templates = data
         this.save()
       }
+    },
+    // 从预设库导入模板
+    importPreset(presetId) {
+      const preset = PRESET_TEMPLATES.find(p => p.id === presetId)
+      if (!preset) return null
+      
+      // 检查是否已导入
+      const imported = getImportedPresets()
+      if (imported.includes(presetId)) {
+        // 已导入过，查找现有模板
+        const existing = this.templates.find(t => t.presetId === presetId)
+        return existing?.id || null
+      }
+      
+      // 生成用户模板
+      const userTemplate = generateUserTemplate(preset)
+      this.templates.unshift(userTemplate)
+      this.save()
+      
+      // 标记为已导入
+      markPresetImported(presetId)
+      
+      return userTemplate.id
+    },
+    
+    // 批量导入预设模板
+    importPresets(presetIds) {
+      const results = []
+      presetIds.forEach(id => {
+        const templateId = this.importPreset(id)
+        if (templateId) {
+          results.push({ presetId: id, templateId })
+        }
+      })
+      return results
+    },
+    
+    // 获取预设模板库（带导入状态）
+    getPresetLibrary(category = 'all') {
+      const templates = getTemplatesByCategory(category)
+      const imported = getImportedPresets()
+      
+      return templates.map(t => ({
+        ...t,
+        isImported: imported.includes(t.id)
+      }))
+    },
+    
+    // 获取模板分类
+    getCategories() {
+      return TEMPLATE_CATEGORIES
     }
-  },
+  }
 })
