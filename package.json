@@ -25,13 +25,13 @@
     "@dcloudio/types": "^3.4.30",
     "@dcloudio/uni-automator": "^2.0.2-5000520260324002",
     "@dcloudio/uni-cli-shared": "^3.0.0-4080720251210001",
-    "@vitest/ui": "^4.1.2",
-    "@vue/test-utils": "^2.4.0-alpha.2",
-    "jsdom": "^29.0.1",
+    "@vitest/ui": "1.6.0",
+    "@vue/test-utils": "2.4.6",
+    "jsdom": "22.1.0",
     "sass": "^1.98.0",
     "semver": "^7.6.3",
-    "vite": "^4.5.5",
-    "vitest": "^4.1.2",
+    "vite": "4.5.5",
+    "vitest": "0.34.6",
     "webpack": "^5.90.0"
   }
 }
