@@ -2,16 +2,54 @@
 import { syncAutoThemeMode } from './services/theme'
 
 const APP_LAUNCH_SESSION_KEY = 'app_launch_session_v1'
+const USER_CONSENT_KEY = 'user_privacy_consent_v1'
 
 export default {
   onLaunch() {
     uni.setStorageSync(APP_LAUNCH_SESSION_KEY, `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
     syncAutoThemeMode()
+    this.checkUserConsent()
   },
   onShow() {
     syncAutoThemeMode()
   },
   onHide() {},
+  methods: {
+    checkUserConsent() {
+      const hasConsent = uni.getStorageSync(USER_CONSENT_KEY)
+      if (!hasConsent) {
+        this.showConsentDialog()
+      }
+    },
+    showConsentDialog() {
+      uni.showModal({
+        title: '用户协议与隐私政策',
+        content: '欢迎使用ReadyToGo！我们重视您的隐私保护。在使用本小程序前，请您阅读并同意《用户服务协议》和《隐私政策》。',
+        confirmText: '同意并继续',
+        cancelText: '暂不使用',
+        success: (res) => {
+          if (res.confirm) {
+            uni.setStorageSync(USER_CONSENT_KEY, true)
+            uni.showToast({
+              title: '欢迎开始使用！',
+              icon: 'success',
+              duration: 2000
+            })
+          } else {
+            uni.showModal({
+              title: '提示',
+              content: '您需要同意协议才能继续使用本小程序。',
+              showCancel: false,
+              confirmText: '我知道了',
+              success: () => {
+                this.showConsentDialog()
+              }
+            })
+          }
+        }
+      })
+    }
+  }
 }
 </script>
 

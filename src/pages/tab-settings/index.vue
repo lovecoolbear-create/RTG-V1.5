@@ -56,6 +56,18 @@
       </view>
     </view>
     
+    <view class="section">
+      <view class="section-title">法律条款</view>
+      <view class="row" @tap="goToPrivacy">
+        <text>隐私政策</text>
+        <text class="arrow">></text>
+      </view>
+      <view class="row" @tap="goToTerms">
+        <text>用户服务协议</text>
+        <text class="arrow">></text>
+      </view>
+    </view>
+
     <view class="tip">
       <text>提示：备份功能会将所有行程、模板和装备库数据导出为 JSON 文本。请妥善保存。</text>
     </view>
@@ -285,6 +297,14 @@ function onDialogConfirm(value) {
 }
 function onDialogAction(index) {
   closeDialog({ confirm: true, index: Number(index), value: '' })
+}
+
+function goToPrivacy() {
+  uni.navigateTo({ url: '/pages/legal/privacy' })
+}
+
+function goToTerms() {
+  uni.navigateTo({ url: '/pages/legal/terms' })
 }
 </script>
 
