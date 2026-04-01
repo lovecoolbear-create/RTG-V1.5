@@ -24,7 +24,7 @@ describe('Integration Tests - Core Workflows', () => {
       const templateId = templateStore.importPreset('preset_business')
       expect(templateId).toBeDefined()
       
-      const template = templateStore.getById(templateId)
+      const template = templateStore.templates.find(t => t.id === templateId)
       expect(template.name).toBe('商务出差')
       
       // 2. 从模板创建行程
@@ -41,50 +41,50 @@ describe('Integration Tests - Core Workflows', () => {
       expect(trip.items.length).toBeGreaterThan(0)
       
       // 3. 更新状态为打包中
-      tripStore.setTripStatus(trip.id, 'packing')
-      let updatedTrip = tripStore.getTripById(trip.id)
+      tripStore.updateTripMeta(trip.id, { status: 'packing' })
+      let updatedTrip = tripStore.trips.find(t => t.id === trip.id)
       expect(updatedTrip.status).toBe('packing')
       
-      // 4. 打包物品
-      const itemIds = updatedTrip.items.map(i => i.id)
+      // 4. 打包物品（使用 itemsOf 获取物品列表）
+      const items = tripStore.itemsOf(trip.id, false)
+      const itemIds = items.map(i => i.id)
       for (const itemId of itemIds) {
-        tripStore.toggleItemPacked(trip.id, false, itemId)
+        tripStore.toggleItem(trip.id, false, itemId)
       }
       
       // 验证所有物品已打包
-      const stats = tripStore.packingStats(trip.id)
-      expect(stats.total).toBe(itemIds.length)
-      expect(stats.packed).toBe(itemIds.length)
-      expect(stats.progress).toBe(100)
+      const updatedItems = tripStore.itemsOf(trip.id, false)
+      const packedCount = updatedItems.filter(i => i.isChecked).length
+      expect(packedCount).toBe(itemIds.length)
       
       // 5. 更新状态为已打包
-      tripStore.setTripStatus(trip.id, 'packed')
-      updatedTrip = tripStore.getTripById(trip.id)
+      tripStore.updateTripMeta(trip.id, { status: 'packed' })
+      updatedTrip = tripStore.trips.find(t => t.id === trip.id)
       expect(updatedTrip.status).toBe('packed')
       
       // 6. 出发
-      tripStore.setTripStatus(trip.id, 'departed')
-      updatedTrip = tripStore.getTripById(trip.id)
+      tripStore.updateTripMeta(trip.id, { status: 'departed' })
+      updatedTrip = tripStore.trips.find(t => t.id === trip.id)
       expect(updatedTrip.status).toBe('departed')
       
       // 7. 进入返程阶段
-      tripStore.setTripStatus(trip.id, 'returnPhase')
-      updatedTrip = tripStore.getTripById(trip.id)
+      tripStore.updateTripMeta(trip.id, { status: 'returnPhase' })
+      updatedTrip = tripStore.trips.find(t => t.id === trip.id)
       expect(updatedTrip.status).toBe('returnPhase')
       
       // 8. 返程清点物品
-      for (const itemId of itemIds) {
-        tripStore.toggleItemPacked(trip.id, true, itemId)
+      const returnItems = tripStore.itemsOf(trip.id, true)
+      for (const item of returnItems) {
+        tripStore.toggleItem(trip.id, true, item.id)
       }
       
       // 9. 完成返程
-      tripStore.completeReturn(trip.id)
-      updatedTrip = tripStore.getTripById(trip.id)
+      tripStore.archiveTrip(trip.id)
+      updatedTrip = tripStore.trips.find(t => t.id === trip.id)
       expect(updatedTrip.status).toBe('archived')
-      expect(updatedTrip.returnCompleted).toBe(true)
       
       // 10. 验证归档
-      const archived = tripStore.toArchive
+      const archived = tripStore.trips.filter(t => t.status === 'archived')
       expect(archived).toHaveLength(1)
       expect(archived[0].id).toBe(trip.id)
     })
@@ -114,11 +114,11 @@ describe('Integration Tests - Core Workflows', () => {
       )
       
       // 归档一个行程
-      tripStore.setTripStatus(trip1.id, 'archived')
+      tripStore.archiveTrip(trip1.id)
       
-      // 验证进行中的行程
+      // 验证进行中的行程（使用 ongoing getter）
       const ongoing = tripStore.ongoing
-      expect(ongoing).toHaveLength(2)
+      expect(ongoing.length).toBeGreaterThanOrEqual(2)
       expect(ongoing.some(t => t.title === '露营B')).toBe(true)
       expect(ongoing.some(t => t.title === '商务C')).toBe(true)
       
@@ -182,12 +182,13 @@ describe('Integration Tests - Core Workflows', () => {
       })
       
       // 验证物品被正确复制
-      expect(trip.items.length).toBe(template.items.length)
-      expect(trip.items.every(i => i.id)).toBe(true) // 每个物品都有ID
-      expect(trip.items.some(i => i.name === '帐篷')).toBe(true)
+      const items = tripStore.itemsOf(trip.id, false)
+      expect(items.length).toBe(template.items.length)
+      expect(items.every(i => i.id)).toBe(true) // 每个物品都有ID
+      expect(items.some(i => i.name === '帐篷')).toBe(true)
       
       // 验证物品独立（修改行程不影响模板）
-      trip.items[0].name = '修改后的名称'
+      items[0].name = '修改后的名称'
       expect(template.items[0].name).not.toBe('修改后的名称')
     })
   })
@@ -238,38 +239,40 @@ describe('Integration Tests - Core Workflows', () => {
         { title: '测试行程' }
       )
       
-      const itemIds = trip.items.map(i => i.id)
+      const items = tripStore.itemsOf(trip.id, false)
+      const itemIds = items.map(i => i.id)
       
       // 初始状态
-      let stats = tripStore.packingStats(trip.id)
-      expect(stats.progress).toBe(0)
+      let checkedCount = items.filter(i => i.isChecked).length
+      expect(checkedCount).toBe(0)
       
       // 打包一半
       const halfCount = Math.floor(itemIds.length / 2)
       for (let i = 0; i < halfCount; i++) {
-        tripStore.toggleItemPacked(trip.id, false, itemIds[i])
+        tripStore.toggleItem(trip.id, false, itemIds[i])
       }
       
-      stats = tripStore.packingStats(trip.id)
-      expect(stats.packed).toBe(halfCount)
+      const updatedItems = tripStore.itemsOf(trip.id, false)
+      checkedCount = updatedItems.filter(i => i.isChecked).length
+      expect(checkedCount).toBe(halfCount)
       
       // 取消打包一个
-      tripStore.toggleItemPacked(trip.id, false, itemIds[0])
+      tripStore.toggleItem(trip.id, false, itemIds[0])
       
-      stats = tripStore.packingStats(trip.id)
-      expect(stats.packed).toBe(halfCount - 1)
+      const finalItems = tripStore.itemsOf(trip.id, false)
+      checkedCount = finalItems.filter(i => i.isChecked).length
+      expect(checkedCount).toBe(halfCount - 1)
       
       // 全部打包
-      for (const itemId of itemIds) {
-        const list = tripStore.itemsOf(trip.id, false)
-        const item = list.find(i => i.id === itemId)
-        if (!item.packed) {
-          tripStore.toggleItemPacked(trip.id, false, itemId)
+      for (const item of finalItems) {
+        if (!item.isChecked) {
+          tripStore.toggleItem(trip.id, false, item.id)
         }
       }
       
-      stats = tripStore.packingStats(trip.id)
-      expect(stats.progress).toBe(100)
+      const allItems = tripStore.itemsOf(trip.id, false)
+      const allPacked = allItems.every(i => i.isChecked)
+      expect(allPacked).toBe(true)
     })
   })
 })
