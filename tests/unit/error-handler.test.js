@@ -61,8 +61,8 @@ describe('Error Handler', () => {
       const asyncFn = async () => 'success'
       
       const result = await withErrorHandling(asyncFn, {
-        type: ErrorTypes.API,
-        code: 'API_001'
+        errorType: ErrorTypes.API,
+        errorCode: 'API_001'
       })
       
       expect(result).toBe('success')
@@ -74,9 +74,9 @@ describe('Error Handler', () => {
       }
       
       const result = await withErrorHandling(asyncFn, {
-        type: ErrorTypes.API,
-        code: 'API_002',
-        defaultValue: 'default'
+        errorType: ErrorTypes.API,
+        errorCode: 'API_002',
+        fallbackValue: 'default'
       })
       
       expect(result).toBe('default')
@@ -89,8 +89,8 @@ describe('Error Handler', () => {
       }
       
       await withErrorHandling(asyncFn, {
-        type: ErrorTypes.API,
-        code: 'API_003',
+        errorType: ErrorTypes.API,
+        errorCode: 'API_003',
         onError: onErrorMock
       })
       
@@ -103,46 +103,66 @@ describe('Error Handler', () => {
       const listener = vi.fn()
       errorHandler.onError(listener)
       
-      const error = new Error('Test error')
-      errorHandler.handle(ErrorTypes.RENDER, 'REN_001', error)
+      const errorInfo = {
+        type: ErrorTypes.RENDER,
+        code: 'REN_001',
+        message: 'Test error'
+      }
+      errorHandler.handle(errorInfo)
       
       expect(listener).toHaveBeenCalled()
     })
 
     it('should get user-friendly message', () => {
-      const message = errorHandler.getUserMessage(ErrorTypes.NETWORK, 'NETWORK_OFFLINE')
+      const errorInfo = {
+        type: ErrorTypes.NETWORK,
+        code: 'NETWORK_OFFLINE'
+      }
+      const message = errorHandler.getUserMessage(errorInfo)
       
       expect(message).toContain('网络')
     })
 
     it('should return generic message for unknown error', () => {
-      const message = errorHandler.getUserMessage('unknown', 'UNKNOWN_001')
+      const errorInfo = {
+        type: 'unknown',
+        code: 'UNKNOWN_001'
+      }
+      const message = errorHandler.getUserMessage(errorInfo)
       
       expect(message).toBeDefined()
       expect(typeof message).toBe('string')
     })
   })
 
-  describe('全局错误处理', () => {
-    it('should handle Vue errors', () => {
-      const vueError = {
+  describe('错误处理方法', () => {
+    it('should handle errors via handle method', () => {
+      const errorInfo = {
+        type: ErrorTypes.RENDER,
+        code: 'REN_001',
         message: 'Vue render error',
         stack: 'Error stack'
       }
       
-      // 模拟 Vue 错误
-      const result = errorHandler.handleVueError(vueError)
+      const result = errorHandler.handle(errorInfo)
       
-      // 验证错误被记录
       expect(result).toBeDefined()
+      expect(result.type).toBe('render')
+      expect(result.userMessage).toBeDefined()
     })
 
-    it('should handle Promise errors', () => {
-      const promiseError = new Error('Promise rejection')
+    it('should handle Promise-like errors via handle method', () => {
+      const errorInfo = {
+        type: ErrorTypes.UNKNOWN,
+        code: 'PROMISE_001',
+        message: 'Promise rejection',
+        stack: 'Error stack'
+      }
       
-      const result = errorHandler.handlePromiseError(promiseError)
+      const result = errorHandler.handle(errorInfo)
       
       expect(result).toBeDefined()
+      expect(result.type).toBe('unknown')
     })
   })
 })

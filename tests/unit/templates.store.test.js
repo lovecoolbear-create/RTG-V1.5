@@ -7,6 +7,8 @@ describe('Template Store', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     uni.clearStorageSync()
+    // 清除预设模板导入记录
+    uni.setStorageSync('rtg_imported_presets', JSON.stringify([]))
   })
 
   describe('基本CRUD', () => {

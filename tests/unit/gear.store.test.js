@@ -53,6 +53,9 @@ describe('Gear Store', () => {
     it('should group by group property', () => {
       const store = useGearStore()
       
+      // 先清空默认装备
+      store.items = []
+      
       store.add('物品1', '电子')
       store.add('物品2', '电子')
       store.add('物品3', '服装')
