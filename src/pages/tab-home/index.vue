@@ -110,10 +110,13 @@
     <view class="list-section">
       <scroll-view scroll-y class="trip-list">
         <view v-if="tab === 0">
-          <view v-if="filteredOngoing.length === 0" class="empty-state">
-            <text class="empty-text">暂无行程，点击上方新建</text>
-          </view>
+          <EmptyState 
+            v-if="filteredOngoing.length === 0" 
+            type="trip"
+            @action="onCreateTrip"
+          />
           <view 
+            v-else
             v-for="t in filteredOngoing" 
             :key="t.id" 
             class="trip-item"
@@ -150,9 +153,11 @@
           </view>
         </view>
         <view v-else>
-          <view v-if="filteredToArchive.length === 0" class="empty-state">
-            <text class="empty-text">暂无待归档行程</text>
-          </view>
+          <EmptyState 
+            v-if="filteredToArchive.length === 0" 
+            type="archive"
+            :show-action="false"
+          />
           <view v-else class="archive-hint">
             <text class="hint-title">有 {{ filteredToArchive.length }} 个已完成行程待归档</text>
           </view>
@@ -219,6 +224,7 @@ import { getFullWeatherInfo, isWeatherApiConfigured } from '../../services/weath
 import DarkDialog from '../../components/DarkDialog.vue'
 import SimpleStatCard from '../../components/SimpleStatCard.vue'
 import StatusIndicator from '../../components/StatusIndicator.vue'
+import EmptyState from '../../components/EmptyState.vue'
 
 const store = useTripStore()
 const templateStore = useTemplateStore()
@@ -348,6 +354,10 @@ function selectDay(cell) {
 
 function onCreate() {
   uni.navigateTo({ url: `/pages/template-selector/index?date=${currentDate.value}` })
+}
+
+function onCreateTrip() {
+  onCreate()
 }
 
 function quickDepart() {

@@ -1,0 +1,61 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="errorGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ef4444;stop-opacity:0.6" />
+      <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:0.6" />
+    </linearGradient>
+  </defs>
+  
+  <!-- 背景装饰 -->
+  <circle cx="100" cy="100" r="70" fill="url(#errorGrad)" opacity="0.1"/>
+  <circle cx="100" cy="100" r="55" fill="url(#errorGrad)" opacity="0.15"/>
+  
+  <!-- 云朵图标 -->
+  <g transform="translate(50, 70)">
+    <!-- 云朵主体 -->
+    <ellipse cx="50" cy="35" rx="35" ry="22" fill="#1a2332" stroke="#ef4444" stroke-width="2" opacity="0.9"/>
+    <circle cx="25" cy="35" r="15" fill="#1a2332" stroke="#ef4444" stroke-width="2" opacity="0.9"/>
+    <circle cx="50" cy="20" r="18" fill="#1a2332" stroke="#ef4444" stroke-width="2" opacity="0.9"/>
+    <circle cx="75" cy="35" r="15" fill="#1a2332" stroke="#ef4444" stroke-width="2" opacity="0.9"/>
+    
+    <!-- 断开的连接线 -->
+    <line x1="30" y1="55" x2="25" y2="70" stroke="#ef4444" stroke-width="3" stroke-linecap="round" opacity="0.6">
+      <animate attributeName="opacity" values="0.6;0.3;0.6" dur="1.5s" repeatCount="indefinite"/>
+    </line>
+    <line x1="50" y1="55" x2="50" y2="75" stroke="#ef4444" stroke-width="3" stroke-linecap="round" opacity="0.6">
+      <animate attributeName="opacity" values="0.6;0.3;0.6" dur="1.5s" begin="0.3s" repeatCount="indefinite"/>
+    </line>
+    <line x1="70" y1="55" x2="75" y2="70" stroke="#ef4444" stroke-width="3" stroke-linecap="round" opacity="0.6">
+      <animate attributeName="opacity" values="0.6;0.3;0.6" dur="1.5s" begin="0.6s" repeatCount="indefinite"/>
+    </line>
+    
+    <!-- 断开标记 -->
+    <circle cx="25" cy="70" r="3" fill="#ef4444">
+      <animate attributeName="opacity" values="1;0.5;1" dur="1s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="50" cy="75" r="3" fill="#ef4444">
+      <animate attributeName="opacity" values="1;0.5;1" dur="1s" begin="0.3s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="75" cy="70" r="3" fill="#ef4444">
+      <animate attributeName="opacity" values="1;0.5;1" dur="1s" begin="0.6s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+  
+  <!-- 刷新/重试图标 -->
+  <g transform="translate(85, 140)">
+    <circle cx="15" cy="15" r="20" fill="none" stroke="#f59e0b" stroke-width="2" opacity="0.8">
+      <animate attributeName="stroke-dasharray" values="0,126; 126,0" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    <path d="M15 5 L15 15 L22 15" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" fill="none">
+      <animateTransform attributeName="transform" type="rotate" from="0 15 15" to="360 15 15" dur="2s" repeatCount="indefinite"/>
+    </path>
+  </g>
+  
+  <!-- 感叹号提示 -->
+  <g transform="translate(140, 40)">
+    <circle cx="0" cy="0" r="12" fill="#ef4444" opacity="0.8">
+      <animate attributeName="opacity" values="0.8;1;0.8" dur="1.5s" repeatCount="indefinite"/>
+    </circle>
+    <text x="0" y="4" text-anchor="middle" fill="#fff" font-size="14" font-weight="bold">!</text>
+  </g>
+</svg>
