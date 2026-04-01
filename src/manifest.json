@@ -42,19 +42,19 @@
         },
         "icons": {
             "android": {
-                "hdpi": "assets/icons/android/icon-72.png",
-                "xhdpi": "assets/icons/android/icon-96.png",
-                "xxhdpi": "assets/icons/android/icon-144.png",
-                "xxxhdpi": "assets/icons/android/icon-192.png"
+                "hdpi": "assets/icons/android/res/mipmap-hdpi/ic_launcher.png",
+                "xhdpi": "assets/icons/android/res/mipmap-xhdpi/ic_launcher.png",
+                "xxhdpi": "assets/icons/android/res/mipmap-xxhdpi/ic_launcher.png",
+                "xxxhdpi": "assets/icons/android/res/mipmap-xxxhdpi/ic_launcher.png"
             },
             "ios": {
-                "appstore": "assets/icons/ios/icon-1024.png",
+                "appstore": "assets/icons/ios/AppIcon~ios-marketing.png",
                 "iphone": {
-                    "2x": "assets/icons/ios/icon-120.png",
-                    "3x": "assets/icons/ios/icon-180.png"
+                    "2x": "assets/icons/ios/AppIcon-40@2x.png",
+                    "3x": "assets/icons/ios/AppIcon@3x.png"
                 },
                 "ipad": {
-                    "2x": "assets/icons/ios/icon-152.png"
+                    "2x": "assets/icons/ios/AppIcon-83.5@2x~ipad.png"
                 }
             }
         }
