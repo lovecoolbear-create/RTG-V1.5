@@ -352,6 +352,8 @@ function selectDay(cell) {
   }
 }
 
+const isCreating = ref(false)
+
 function onCreate() {
   uni.navigateTo({ url: `/pages/template-selector/index?date=${currentDate.value}` })
 }
@@ -361,9 +363,13 @@ function onCreateTrip() {
 }
 
 function quickDepart() {
+  if (isCreating.value) return
+  isCreating.value = true
+  
   const templates = templateStore.templates || []
   if (templates.length === 0) {
     uni.showToast({ title: '请先创建模板', icon: 'none' })
+    isCreating.value = false
     return
   }
   const trip = store.createTripFromTemplate(templates[0], {
@@ -371,9 +377,13 @@ function quickDepart() {
     date: currentDate.value,
   })
   uni.navigateTo({ url: `/pages/trip-checklist/index?id=${trip.id}&mode=departure` })
+  
+  setTimeout(() => { isCreating.value = false }, 1000)
 }
 
 async function quickDepartWithTemplate() {
+  if (isCreating.value) return
+  
   const templates = templateStore.templates || []
   if (templates.length === 0) {
     uni.showToast({ title: '请先创建模板', icon: 'none' })
@@ -382,11 +392,13 @@ async function quickDepartWithTemplate() {
   
   // If only one template, use it directly
   if (templates.length === 1) {
+    isCreating.value = true
     const trip = store.createTripFromTemplate(templates[0], {
       title: templates[0].name,
       date: currentDate.value,
     })
     uni.navigateTo({ url: `/pages/trip-checklist/index?id=${trip.id}&mode=departure` })
+    setTimeout(() => { isCreating.value = false }, 1000)
     return
   }
   
@@ -397,12 +409,14 @@ async function quickDepartWithTemplate() {
     actions: templateNames,
   }).then((res) => {
     if (res.index >= 0) {
+      isCreating.value = true
       const selectedTemplate = templates[res.index]
       const trip = store.createTripFromTemplate(selectedTemplate, {
         title: selectedTemplate.name,
         date: currentDate.value,
       })
       uni.navigateTo({ url: `/pages/trip-checklist/index?id=${trip.id}&mode=departure` })
+      setTimeout(() => { isCreating.value = false }, 1000)
     }
   })
 }
@@ -777,6 +791,7 @@ async function fetchWeather() {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
 }
 
 .day-text {

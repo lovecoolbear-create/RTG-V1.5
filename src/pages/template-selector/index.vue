@@ -70,6 +70,8 @@ const formScheduleTime = ref('')
 const formDestination = ref('')
 const LAST_TEMPLATE_KEY = 'last_template_id'
 const lastTemplateId = ref('')
+const isCreating = ref(false)
+
 const libraryTemplates = computed(() => {
   const all = templates.value || []
   if (!all.length) return []
@@ -102,14 +104,19 @@ function onScheduleTimeChange(e) {
 }
 
 function confirmCreate() {
+  if (isCreating.value) return
+  isCreating.value = true
+  
   const tpl = templates.value.find((item) => item.id === selectedTemplateId.value)
   if (!tpl) {
     uni.showToast({ title: '请先选择模板', icon: 'none' })
+    isCreating.value = false
     return
   }
   const title = formTitle.value.trim() || tpl.name
   if (!formDate.value) {
     uni.showToast({ title: '请先选择出行日期', icon: 'none' })
+    isCreating.value = false
     return
   }
   const trip = tripStore.createTripFromTemplate(tpl, {
@@ -126,10 +133,13 @@ function confirmCreate() {
   uni.setStorageSync(LAST_TEMPLATE_KEY, tpl.id)
   if (postCreateAction.value === 'cardOnly') {
     uni.showToast({ title: '行程已创建', icon: 'none' })
+    isCreating.value = false
     uni.navigateBack()
     return
   }
   uni.navigateTo({ url: `/pages/trip-checklist/index?id=${trip.id}&mode=departure` })
+  
+  setTimeout(() => { isCreating.value = false }, 1000)
 }
 </script>
 
