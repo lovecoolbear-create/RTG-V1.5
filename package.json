@@ -6,7 +6,10 @@
     "dev:mp-weixin": "uni -p mp-weixin",
     "build:mp-weixin": "uni build -p mp-weixin",
     "dev:h5": "uni",
-    "build:h5": "uni build"
+    "build:h5": "uni build",
+    "test": "vitest run",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@dcloudio/uni-app": "3.0.0-4080720251210001",
@@ -22,9 +25,13 @@
     "@dcloudio/types": "^3.4.30",
     "@dcloudio/uni-automator": "^2.0.2-5000520260324002",
     "@dcloudio/uni-cli-shared": "^3.0.0-4080720251210001",
+    "@vitest/ui": "^4.1.2",
+    "@vue/test-utils": "^2.4.0-alpha.2",
+    "jsdom": "^29.0.1",
     "sass": "^1.98.0",
     "semver": "^7.6.3",
     "vite": "^4.5.5",
+    "vitest": "^4.1.2",
     "webpack": "^5.90.0"
   }
 }
