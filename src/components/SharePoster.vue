@@ -42,6 +42,7 @@
 
 <script setup>
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { trackShare, ShareTypes, ShareChannels } from '../utils/share-tracker.js'
 
 const props = defineProps({
   trip: {
@@ -355,18 +356,50 @@ function formatDate(dateStr) {
 async function saveToAlbum() {
   if (!posterImage.value) return
   
+  // 开始追踪
+  const shareId = `share_${Date.now()}`
+  
   try {
     await uni.saveImageToPhotosAlbum({
       filePath: posterImage.value
     })
+    
+    // 记录成功
+    await trackShare({
+      type: ShareTypes.TRIP,
+      channel: ShareChannels.SAVE_ALBUM,
+      contentId: props.trip?.id,
+      contentTitle: props.trip?.title,
+      success: true
+    })
+    
     uni.showToast({ title: '已保存到相册', icon: 'success' })
   } catch (error) {
+    // 记录失败
+    await trackShare({
+      type: ShareTypes.TRIP,
+      channel: ShareChannels.SAVE_ALBUM,
+      contentId: props.trip?.id,
+      contentTitle: props.trip?.title,
+      success: false,
+      errorMsg: error.errMsg || '保存失败'
+    })
+    
     uni.showToast({ title: '保存失败', icon: 'none' })
   }
 }
 
 // 分享给好友
-function shareToFriend() {
+async function shareToFriend() {
+  // 记录分享
+  await trackShare({
+    type: ShareTypes.TRIP,
+    channel: ShareChannels.WECHAT_FRIEND,
+    contentId: props.trip?.id,
+    contentTitle: props.trip?.title,
+    success: true
+  })
+  
   // 触发微信分享
   emit('share', {
     type: 'trip',
