@@ -1,9 +1,9 @@
 {
     "name" : "ReadyToGo",
     "appid" : "__UNI__C101DD7",
-    "description" : "ReadyToGo 微信小程序",
-    "versionName" : "0.0.1",
-    "versionCode" : "1",
+    "description" : "轻松准备，立即出发 - 出行清单管理工具",
+    "versionName" : "1.0.0",
+    "versionCode" : "100",
     "mp-weixin" : {
         "appid" : "wx6404146ef45929a0",
         "lazyCodeLoading" : "requiredComponents",
@@ -22,6 +22,41 @@
             "urlCheck" : false,
             "es6" : true,
             "minified" : true
+        }
+    },
+    "app-plus": {
+        "splashscreen": {
+            "android": {
+                "hdpi": "assets/splash/splash.9.png",
+                "xhdpi": "assets/splash/splash.9.png",
+                "xxhdpi": "assets/splash/splash@2x.png"
+            },
+            "ios": {
+                "storyboard": "assets/splash/LaunchScreen.storyboard",
+                "iphone": {
+                    "portrait": "assets/splash/ios/Default@2x.png",
+                    "portrait-896h@2x": "assets/splash/ios/Default-896h@2x.png",
+                    "portrait-896h@3x": "assets/splash/ios/Default-896h@3x.png"
+                }
+            }
+        },
+        "icons": {
+            "android": {
+                "hdpi": "assets/icons/android/icon-72.png",
+                "xhdpi": "assets/icons/android/icon-96.png",
+                "xxhdpi": "assets/icons/android/icon-144.png",
+                "xxxhdpi": "assets/icons/android/icon-192.png"
+            },
+            "ios": {
+                "appstore": "assets/icons/ios/icon-1024.png",
+                "iphone": {
+                    "2x": "assets/icons/ios/icon-120.png",
+                    "3x": "assets/icons/ios/icon-180.png"
+                },
+                "ipad": {
+                    "2x": "assets/icons/ios/icon-152.png"
+                }
+            }
         }
     }
 }

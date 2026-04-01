@@ -1,0 +1,33 @@
+<svg width="400" height="144" viewBox="0 0 400 144" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#76abff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#34d399;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- 图标部分 -->
+  <g transform="translate(20, 20)">
+    <!-- 图标背景 -->
+    <rect width="104" height="104" rx="20.8" fill="url(#brandGradient)"/>
+    
+    <!-- 行李箱主体 -->
+    <rect x="26" y="34" width="52" height="36" rx="4" fill="white"/>
+    
+    <!-- 行李箱拉杆 -->
+    <rect x="48" y="24" width="8" height="10" rx="1.5" fill="white"/>
+    
+    <!-- 对勾标记 -->
+    <path d="M38 50 L48 60 L68 42" stroke="#059669" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+  
+  <!-- 文字部分 -->
+  <text x="144" y="76" font-family="SF Pro Display, PingFang SC, sans-serif" font-size="42" font-weight="700" fill="#1a2332" letter-spacing="0.02em">
+    ReadyToGo
+  </text>
+  
+  <!-- 副标题 -->
+  <text x="144" y="100" font-family="PingFang SC, sans-serif" font-size="18" font-weight="400" fill="#64748b">
+    轻松准备，立即出发
+  </text>
+</svg>
