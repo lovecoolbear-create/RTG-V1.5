@@ -3,7 +3,10 @@
     <view class="meta-card" :class="{ compact: !showDetails }">
       <view class="meta-top">
         <text class="badge">{{ isReturn ? '返程清点' : '出发清点' }}</text>
-        <text class="detail-toggle" @tap="toggleDetails">{{ showDetails ? '收起详情' : '详情' }}</text>
+        <view class="meta-actions">
+          <text class="share-btn" @tap="openSharePoster">分享</text>
+          <text class="detail-toggle" @tap="toggleDetails">{{ showDetails ? '收起详情' : '详情' }}</text>
+        </view>
       </view>
       <view class="title-line">
         <text class="title">{{ trip?.title || '当前行程' }}</text>
@@ -108,20 +111,25 @@
       </view>
     </view>
     <DarkDialog
-      :visible="dialogState.visible"
+      v-model="dialogState.visible"
       :mode="dialogState.mode"
       :title="dialogState.title"
       :message="dialogState.message"
-      :confirm-text="dialogState.confirmText"
-      :cancel-text="dialogState.cancelText"
+      :confirmText="dialogState.confirmText"
+      :cancelText="dialogState.cancelText"
       :placeholder="dialogState.placeholder"
-      :model-value="dialogState.modelValue"
+      :modelValue="dialogState.modelValue"
       :danger="dialogState.danger"
+      :closeOnMask="dialogState.closeOnMask"
       :actions="dialogState.actions"
-      :close-on-mask="dialogState.closeOnMask"
-      @cancel="onDialogCancel"
-      @confirm="onDialogConfirm"
-      @action="onDialogAction"
+      @update:modelValue="(v) => dialogState.modelValue = v"
+      @confirm="handleDialogConfirm"
+      @cancel="handleDialogCancel"
+    />
+    <SharePoster
+      :trip="trip"
+      :visible="showSharePoster"
+      @close="closeSharePoster"
     />
   </view>
 </template>
@@ -133,6 +141,7 @@ import { useTripStore } from '../../stores/trip'
 import { useTemplateStore } from '../../stores/templates'
 import { useGearStore } from '../../stores/gear'
 import DarkDialog from '../../components/DarkDialog.vue'
+import SharePoster from '../../components/SharePoster.vue'
 import { useAutoThemeClass } from '../../services/theme'
 
 const tripId = ref('')
@@ -146,6 +155,8 @@ const { themeClass, pageThemeStyle } = useAutoThemeClass()
 const list = ref([])
 const showBagPicker = ref(false)
 const draftBagIds = ref([])
+const showSharePoster = ref(false)
+
 const trip = computed(() => store.trips.find((t) => t.id === tripId.value) || null)
 const HOME_AUTO_TAB_KEY = 'home_auto_tab'
 const RULES_STORAGE_KEY = 'departure_rules_v1'
