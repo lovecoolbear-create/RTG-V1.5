@@ -90,6 +90,28 @@
       </view>
     </view>
 
+    <!-- 智能推荐模板 -->
+    <view v-if="recommendedTemplates.length" class="recommend-section">
+      <view class="recommend-header">
+        <text class="recommend-title">为你推荐</text>
+        <text class="recommend-subtitle">{{ recommendReason }}</text>
+      </view>
+      <scroll-view scroll-x class="recommend-scroll" :show-scrollbar="false">
+        <view class="recommend-list">
+          <view 
+            v-for="tpl in recommendedTemplates" 
+            :key="tpl.id"
+            class="recommend-card"
+            @tap="quickCreateWithTemplate(tpl)"
+          >
+            <text class="recommend-icon">{{ tpl.icon || '📦' }}</text>
+            <text class="recommend-name">{{ tpl.name }}</text>
+            <text class="recommend-desc">{{ tpl.items?.length || 0 }} 件物品</text>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+
     <!-- 标签切换 -->
     <view class="tab-section">
       <button 
@@ -352,6 +374,63 @@ const filteredOngoing = computed(() => {
 const filteredToArchive = computed(() => {
   return toArchive.value
     .sort((a, b) => scheduleOrder(a) - scheduleOrder(b))
+})
+
+// 智能推荐模板
+const recommendedTemplates = computed(() => {
+  const templates = templateStore.templates || []
+  if (templates.length === 0) return []
+  
+  // 获取最近使用过的模板
+  const recentTrips = toArchive.value.slice(-5)
+  const usedTemplateIds = recentTrips.map(t => t.templateId).filter(Boolean)
+  
+  // 统计使用频率
+  const templateFrequency = {}
+  usedTemplateIds.forEach(id => {
+    templateFrequency[id] = (templateFrequency[id] || 0) + 1
+  })
+  
+  // 根据使用频率和天气推荐
+  let recommendations = templates.map(tpl => {
+    let score = templateFrequency[tpl.id] || 0
+    let reason = ''
+    
+    // 天气因素加分
+    if (weather.value.code === 'rain' && tpl.category === '户外') {
+      score += 2
+      reason = '雨天推荐'
+    } else if (weather.value.high > 30 && tpl.category === '通用') {
+      score += 1
+      reason = '高温适用'
+    }
+    
+    // 季节性推荐
+    const month = new Date().getMonth() + 1
+    if ((month >= 6 && month <= 8) && tpl.name.includes('夏')) {
+      score += 1
+      reason = reason || '夏季推荐'
+    } else if ((month >= 12 || month <= 2) && tpl.name.includes('冬')) {
+      score += 1
+      reason = reason || '冬季推荐'
+    }
+    
+    return { ...tpl, score, reason }
+  })
+  
+  // 按分数排序，取前3个
+  recommendations = recommendations
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3)
+    .filter(t => t.score > 0 || recommendations.indexOf(t) < 2)
+  
+  return recommendations.slice(0, 3)
+})
+
+const recommendReason = computed(() => {
+  if (recommendedTemplates.value.length === 0) return ''
+  const first = recommendedTemplates.value[0]
+  return first.reason || '根据你的出行习惯推荐'
 })
 
 const completedThisMonth = computed(() => {
