@@ -86,6 +86,84 @@
       }
     }
   ],
+  "subPackages": [
+    {
+      "root": "pages",
+      "pages": [
+        {
+          "path": "trip-checklist/index",
+          "style": {
+            "navigationBarTitleText": "清单"
+          }
+        },
+        {
+          "path": "template-selector/index",
+          "style": {
+            "navigationBarTitleText": "选择模板"
+          }
+        },
+        {
+          "path": "template-edit/index",
+          "style": {
+            "navigationBarTitleText": "编辑模板"
+          }
+        },
+        {
+          "path": "gear-picker/index",
+          "style": {
+            "navigationBarTitleText": "选择装备"
+          }
+        },
+        {
+          "path": "history-detail/index",
+          "style": {
+            "navigationBarTitleText": "归档详情"
+          }
+        },
+        {
+          "path": "trip-edit/index",
+          "style": {
+            "navigationBarTitleText": "编辑行程"
+          }
+        }
+      ]
+    },
+    {
+      "root": "pages/legal",
+      "pages": [
+        {
+          "path": "privacy",
+          "style": {
+            "navigationBarTitleText": "隐私政策"
+          }
+        },
+        {
+          "path": "terms",
+          "style": {
+            "navigationBarTitleText": "用户协议"
+          }
+        }
+      ]
+    }
+  ],
+  "preloadRule": {
+    "pages/tab-home/index": {
+      "network": "all",
+      "packages": ["pages"]
+    },
+    "pages/tab-gear/index": {
+      "network": "all",
+      "packages": ["pages"]
+    },
+    "pages/tab-templates/index": {
+      "network": "all",
+      "packages": ["pages"]
+    },
+    "pages/tab-history/index": {
+      "network": "all",
+      "packages": ["pages"]
+    }
+  },
   "globalStyle": {
     "navigationBarBackgroundColor": "#040a16",
     "navigationBarTextStyle": "white",
