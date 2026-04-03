@@ -16,6 +16,7 @@
         <view class="split-line"></view>
         <text class="filter-trigger" @tap.stop="toggleCategoryMenu">{{ activeCategoryLabel }} ▼</text>
       </view>
+      <button size="mini" class="community-btn" @tap="openCommunity">🌐</button>
       <button size="mini" class="add-btn" @tap="create">+</button>
     </view>
     <view v-if="showCategoryMenu" class="group-menu">
@@ -72,6 +73,56 @@
       @confirm="onDialogConfirm"
       @action="onDialogAction"
     />
+
+    <!-- 社区模板分享弹窗 -->
+    <view v-if="showCommunity" class="community-modal" @tap="closeCommunity">
+      <view class="community-sheet" @tap.stop>
+        <view class="community-header">
+          <text class="community-title">🌐 社区模板</text>
+          <text class="community-close" @tap="closeCommunity">✕</text>
+        </view>
+        <view class="community-tabs">
+          <text 
+            class="community-tab" 
+            :class="{ active: communityTab === 'hot' }"
+            @tap="communityTab = 'hot'"
+          >热门</text>
+          <text 
+            class="community-tab" 
+            :class="{ active: communityTab === 'new' }"
+            @tap="communityTab = 'new'"
+          >最新</text>
+          <text 
+            class="community-tab" 
+            :class="{ active: communityTab === 'my' }"
+            @tap="communityTab = 'my'"
+          >我的分享</text>
+        </view>
+        <scroll-view scroll-y class="community-list">
+          <view v-if="communityTemplates.length === 0" class="community-empty">
+            <text>社区模板功能开发中...</text>
+            <text class="community-hint">即将上线：分享、评分、下载模板</text>
+          </view>
+          <view
+            v-for="tpl in communityTemplates"
+            :key="tpl.id"
+            class="community-item"
+            @tap="importCommunityTemplate(tpl)"
+          >
+            <view class="community-item-info">
+              <text class="community-item-name">{{ tpl.name }}</text>
+              <text class="community-item-meta">{{ tpl.author }} · {{ tpl.items.length }}件 · ⭐{{ tpl.rating }}</text>
+            </view>
+            <text class="community-item-download">⬇</text>
+          </view>
+        </scroll-view>
+        <view class="community-footer">
+          <button class="community-share-btn" @tap="shareToCommunity">
+            分享我的模板
+          </button>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -125,6 +176,66 @@ const dialogState = ref({
   actions: [],
 })
 let dialogResolver = null
+
+const showCommunity = ref(false)
+const communityTab = ref('hot')
+const communityTemplates = ref([])
+
+function openCommunity() {
+  showCommunity.value = true
+  // 模拟加载社区模板
+  loadCommunityTemplates()
+}
+
+function closeCommunity() {
+  showCommunity.value = false
+}
+
+async function loadCommunityTemplates() {
+  // 这里将来会调用API获取社区模板
+  // 目前使用模拟数据
+  communityTemplates.value = []
+}
+
+async function shareToCommunity() {
+  const myTemplates = store.templates
+  if (myTemplates.length === 0) {
+    uni.showToast({ title: '没有可分享的模板', icon: 'none' })
+    return
+  }
+  
+  // 选择要分享的模板
+  const res = await openAction({
+    title: '选择要分享的模板',
+    actions: myTemplates.slice(0, 5).map(t => t.name)
+  })
+  
+  if (res.index >= 0) {
+    const tpl = myTemplates[res.index]
+    // 模拟分享
+    uni.showToast({ title: `已分享「${tpl.name}」`, icon: 'success' })
+  }
+}
+
+async function importCommunityTemplate(tpl) {
+  const res = await openConfirm({
+    title: '导入模板',
+    message: `确定要导入「${tpl.name}」吗？\n包含 ${tpl.items.length} 件物品`,
+    confirmText: '导入'
+  })
+  
+  if (res.confirm) {
+    // 导入模板
+    const newTpl = store.addTemplate(tpl.name + ' (社区)')
+    newTpl.items = [...tpl.items]
+    newTpl.category = tpl.category
+    newTpl.reminderRules = tpl.reminderRules || []
+    store.save()
+    
+    uni.showToast({ title: '模板已导入', icon: 'success' })
+    closeCommunity()
+  }
+}
 
 async function create() {
   const nameRes = await openPrompt({
