@@ -106,6 +106,45 @@ export const useTripStore = defineStore('trip', {
   actions: {
     saveTrips() {
       set('trips', this.trips)
+      // 自动备份（保留最近10个版本）
+      this.autoBackup()
+    },
+    autoBackup() {
+      try {
+        const backup = {
+          timestamp: Date.now(),
+          trips: this.trips,
+          date: new Date().toISOString()
+        }
+        
+        // 获取现有备份
+        let backups = get('rtg_auto_backups', [])
+        
+        // 添加新备份到开头
+        backups.unshift(backup)
+        
+        // 保留最近10个版本
+        if (backups.length > 10) {
+          backups = backups.slice(0, 10)
+        }
+        
+        set('rtg_auto_backups', backups)
+      } catch (e) {
+        console.error('Auto backup failed:', e)
+      }
+    },
+    getAutoBackups() {
+      return get('rtg_auto_backups', [])
+    },
+    restoreFromBackup(index) {
+      const backups = this.getAutoBackups()
+      if (index >= 0 && index < backups.length) {
+        const backup = backups[index]
+        this.trips = backup.trips
+        this.saveTrips()
+        return true
+      }
+      return false
     },
     progress(trip) {
       if (trip.status === 'archived') return 1

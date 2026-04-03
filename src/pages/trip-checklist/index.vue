@@ -757,6 +757,49 @@ function saveTripBags() {
   showBagPicker.value = false
   refreshList()
 }
+function openGearPicker() {
+  selectedGearIds.value = []
+  gearSearchKeyword.value = ''
+  showGearPicker.value = true
+}
+function toggleGearSelection(gearId) {
+  const index = selectedGearIds.value.indexOf(gearId)
+  if (index > -1) {
+    selectedGearIds.value.splice(index, 1)
+  } else {
+    selectedGearIds.value.push(gearId)
+  }
+}
+function addSelectedGearItems() {
+  if (selectedGearIds.value.length === 0) {
+    uni.showToast({ title: '请先选择装备', icon: 'none' })
+    return
+  }
+  
+  // 将选中的装备添加到清单
+  selectedGearIds.value.forEach(gearId => {
+    const gearItem = gearStore.items.find(item => item.id === gearId)
+    if (gearItem) {
+      store.addCustomItemToTrip(tripId.value, {
+        name: gearItem.name,
+        group: gearItem.category || '装备',
+        isImportant: gearItem.isImportant || false,
+        isConsumable: gearItem.isConsumable || false,
+        weight: gearItem.weight || 0,
+        gearId: gearItem.id
+      })
+    }
+  })
+  
+  uni.showToast({ 
+    title: `已添加${selectedGearIds.value.length}件装备`, 
+    icon: 'success' 
+  })
+  
+  showGearPicker.value = false
+  selectedGearIds.value = []
+  refreshList()
+}
 function openConfirm(options) {
   return openDialog({
     mode: 'confirm',
