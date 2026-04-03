@@ -19,9 +19,12 @@
           <text class="month-display">{{ year }}年 {{ monthName }}</text>
           <text class="calendar-toggle-hint">{{ isCalendarCollapsed ? '▼' : '▲' }}</text>
         </view>
-        <view class="month-nav">
-          <text class="nav-btn" @tap.stop="switchMonth(-1)">‹</text>
-          <text class="nav-btn" @tap.stop="switchMonth(1)">›</text>
+        <view class="calendar-actions">
+          <view class="month-nav">
+            <text class="nav-btn" @tap.stop="switchMonth(-1)">‹</text>
+            <text class="nav-btn" @tap.stop="switchMonth(1)">›</text>
+          </view>
+          <text class="quick-add-btn" @tap.stop="quickCreateFromCalendar">+</text>
         </view>
       </view>
       <view 
@@ -108,6 +111,31 @@
 
     <!-- 行程列表 -->
     <view class="list-section">
+      <!-- 首次使用引导浮层 -->
+      <view v-if="showFirstTimeGuide" class="first-time-guide">
+        <view class="guide-mask" @tap="closeFirstTimeGuide"></view>
+        <view class="guide-content">
+          <text class="guide-title">欢迎使用 ReadyToGo！</text>
+          <text class="guide-desc">出行清单管家，让每次出发都井井有条</text>
+          <view class="guide-steps">
+            <view class="step">
+              <text class="step-num">1</text>
+              <text class="step-text">选择模板快速创建行程</text>
+            </view>
+            <view class="step">
+              <text class="step-num">2</text>
+              <text class="step-text">勾选物品标记完成</text>
+            </view>
+            <view class="step">
+              <text class="step-num">3</text>
+              <text class="step-text">一键分享行程给朋友</text>
+            </view>
+          </view>
+          <button class="guide-btn" @tap="startFirstTrip">创建第一个行程</button>
+          <text class="guide-skip" @tap="closeFirstTimeGuide">跳过引导</text>
+        </view>
+      </view>
+      
       <scroll-view scroll-y class="trip-list">
         <view v-if="tab === 0">
           <EmptyState 
@@ -248,6 +276,7 @@ const displayedMonth = ref(new Date(today.getFullYear(), today.getMonth(), 1))
 const selectedDay = ref(today.getDate())
 const helloText = ref('你好')
 const isCalendarCollapsed = ref(true)
+const showFirstTimeGuide = ref(false)
 
 const weather = ref({
   code: 'sunny',
@@ -356,6 +385,37 @@ const isCreating = ref(false)
 
 function onCreate() {
   uni.navigateTo({ url: `/pages/template-selector/index?date=${currentDate.value}` })
+}
+
+function quickCreateFromCalendar() {
+  // 使用选中的日期快速创建行程
+  const templates = templateStore.templates || []
+  if (templates.length === 0) {
+    uni.showToast({ title: '请先创建模板', icon: 'none' })
+    return
+  }
+  
+  // 防重复创建锁
+  if (isCreating.value) return
+  isCreating.value = true
+  
+  // 使用第一个模板快速创建
+  const firstTemplate = templates[0]
+  const trip = store.createTripFromTemplate(firstTemplate, {
+    title: firstTemplate.name,
+    date: currentDate.value,
+    source: 'calendar'
+  })
+  
+  uni.showToast({ title: '行程已创建', icon: 'success' })
+  
+  // 导航到清单页
+  setTimeout(() => {
+    uni.navigateTo({ 
+      url: `/pages/trip-checklist/index?id=${trip.id}&mode=departure` 
+    })
+    isCreating.value = false
+  }, 500)
 }
 
 function onCreateTrip() {
@@ -486,6 +546,31 @@ function onTripLongPress(t) {
 
 function toggleCalendar() {
   isCalendarCollapsed.value = !isCalendarCollapsed.value
+}
+
+// 首次使用引导
+function checkFirstTimeGuide() {
+  const hasSeenGuide = uni.getStorageSync('rtg_has_seen_guide')
+  const trips = store.trips || []
+  if (!hasSeenGuide && trips.length === 0) {
+    showFirstTimeGuide.value = true
+  }
+}
+
+function closeFirstTimeGuide() {
+  showFirstTimeGuide.value = false
+  uni.setStorageSync('rtg_has_seen_guide', true)
+}
+
+async function startFirstTrip() {
+  closeFirstTimeGuide()
+  // 自动导入常用预设模板
+  const templateStore = useTemplateStore()
+  const imported = templateStore.autoImportCommonPresets()
+  if (imported.length > 0) {
+    uni.showToast({ title: `已导入${imported.length}个常用模板`, icon: 'none' })
+  }
+  onCreate()
 }
 
 // 来源标签常量
@@ -635,6 +720,7 @@ function updateHello() {
 onShow(() => {
   updateHello()
   fetchWeather()
+  checkFirstTimeGuide()
 })
 
 async function fetchWeather() {

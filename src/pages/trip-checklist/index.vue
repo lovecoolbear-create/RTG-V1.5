@@ -1,57 +1,97 @@
 <template>
   <view class="page" :class="themeClass" :style="pageThemeStyle">
-    <view class="meta-card" :class="{ compact: !showDetails }">
+    <!-- 简化版顶部卡片 -->
+    <view class="meta-card" :class="{ compact: !showDetails, expanded: showDetails }">
       <view class="meta-top">
         <text class="badge">{{ isReturn ? '返程清点' : '出发清点' }}</text>
         <view class="meta-actions">
+          <text class="mode-toggle" @tap="toggleReturnMode">{{ isReturn ? '切换出发' : '切换返程' }}</text>
           <text class="share-btn" @tap="openSharePoster">分享</text>
-          <text class="detail-toggle" @tap="toggleDetails">{{ showDetails ? '收起详情' : '详情' }}</text>
+          <text class="detail-toggle" @tap="toggleDetails">{{ showDetails ? '收起' : '展开' }}</text>
         </view>
       </view>
-      <view class="title-line">
-        <text class="title">{{ trip?.title || '当前行程' }}</text>
-        <text class="progress">已勾选 {{ checkedCount }}/{{ totalCount }}</text>
+      
+      <!-- 紧凑模式：只显示核心信息 -->
+      <view v-if="!showDetails" class="compact-info">
+        <view class="compact-main">
+          <text class="title">{{ trip?.title || '当前行程' }}</text>
+          <text class="schedule">{{ scheduleLabel }}</text>
+        </view>
+        <view class="compact-progress">
+          <text class="progress-text">{{ checkedCount }}/{{ totalCount }}</text>
+          <view class="progress-ring" :style="{ '--progress': (totalCount > 0 ? checkedCount / totalCount : 0) }">
+            <view class="progress-circle"></view>
+          </view>
+        </view>
       </view>
+      
+      <!-- 展开模式：显示完整详情 -->
+      <template v-else>
+        <view class="title-line">
+          <text class="title">{{ trip?.title || '当前行程' }}</text>
+          <text class="progress-detail">已勾选 {{ checkedCount }}/{{ totalCount }}</text>
+        </view>
+        <view class="detail-panel">
+          <view class="meta-grid">
+            <view class="meta-item" v-if="trip?.source">
+              <text class="meta-label">来源</text>
+              <text class="meta-value">{{ sourceLabel }}</text>
+            </view>
+            <view class="meta-item" v-if="trip?.templateCategory">
+              <text class="meta-label">模板</text>
+              <text class="meta-value">{{ templateCategoryLabel }}</text>
+            </view>
+            <view class="meta-item">
+              <text class="meta-label">时间</text>
+              <text class="meta-value">{{ scheduleLabel || '未设置' }}</text>
+            </view>
+            <view class="meta-item" v-if="trip?.destination">
+              <text class="meta-label">地点</text>
+              <text class="meta-value">{{ destinationLabel }}</text>
+            </view>
+            <view class="meta-item" v-if="trip?.keyTime">
+              <text class="meta-label">关键时间</text>
+              <text class="meta-value">{{ keyTimeLabel }}</text>
+            </view>
+            <view class="meta-item" v-if="trip?.idType">
+              <text class="meta-label">证件</text>
+              <text class="meta-value">{{ idTypeLabel }}</text>
+            </view>
+          </view>
+        </view>
+        <view class="bag-bar">
+          <view class="bag-header">
+            <text class="bag-label">本次箱包</text>
+            <button size="mini" class="bag-btn" @tap="openBagPicker">{{ activeTripBags.length > 0 ? '修改' : '选择' }}</button>
+          </view>
+          <view class="bag-values">
+            <text v-if="activeTripBags.length === 0" class="bag-empty">未选择箱包</text>
+            <text v-for="bag in activeTripBags" :key="bag.id" class="bag-pill">{{ bag.name }}</text>
+          </view>
+        </view>
+        <view class="weight-bar" v-if="estimatedWeightLabel !== '0g'">
+          <text class="weight-text">{{ estimatedWeightLabel }}</text>
+          <text v-if="unweightedCount > 0" class="weight-sub">{{ unweightedCount }}件未估重</text>
+        </view>
+      </template>
+      
+      <!-- 分组进度（紧凑和展开模式都显示）-->
       <view v-if="groupProgressList.length" class="group-progress-wrap">
-        <scroll-view scroll-x class="group-progress-scroll">
+        <scroll-view scroll-x class="group-progress-scroll" :show-scrollbar="false">
           <view class="group-progress-list">
             <view
               v-for="gp in groupProgressList"
               :key="gp.anchorId"
               class="group-progress-pill"
-              :class="{ done: gp.done }"
+              :class="{ done: gp.done, 'in-progress': gp.checked > 0 && !gp.done }"
               @tap="jumpToGroup(gp.anchorId)"
             >
               <text class="group-progress-name">{{ gp.name }}</text>
-              <text class="group-progress-value">{{ gp.checked }}/{{ gp.total }}</text>
+              <text class="group-progress-value" :class="{ 'is-done': gp.done }">{{ gp.checked }}/{{ gp.total }}</text>
             </view>
           </view>
         </scroll-view>
       </view>
-      <view v-if="showDetails" class="detail-panel">
-        <view class="meta-grid">
-          <text class="meta">来源：{{ sourceLabel }}</text>
-          <text class="meta">模板：{{ templateCategoryLabel }}</text>
-          <text class="meta">时间：{{ scheduleLabel }}</text>
-          <text class="meta">地点：{{ destinationLabel }}</text>
-          <text class="meta">关键时间：{{ keyTimeLabel }}</text>
-          <text class="meta">证件类型：{{ idTypeLabel }}</text>
-        </view>
-      </view>
-      <view class="bag-bar">
-        <view class="bag-label">本次箱包</view>
-        <view class="bag-values">
-          <text v-if="activeTripBags.length === 0" class="bag-empty">未选择</text>
-          <text v-for="bag in activeTripBags" :key="bag.id" class="bag-pill">{{ bag.name }}</text>
-        </view>
-        <view class="drag-tip">长按清单卡片可放入箱包或删除</view>
-        <button size="mini" class="bag-btn" @tap="openBagPicker">选择箱包</button>
-      </view>
-      <view class="weight-bar">
-        <text class="weight-text">已估总重 {{ estimatedWeightLabel }}</text>
-        <text class="weight-sub">未估重 {{ unweightedCount }} 件</text>
-      </view>
-    </view>
 
     <view class="item-pane">
       <scroll-view scroll-y class="item-scroll" :scroll-into-view="activeGroupAnchor" :scroll-with-animation="true">
@@ -62,17 +102,22 @@
             v-for="it in itemsByGroup[g]"
             :key="it.id"
             class="row"
+            :class="{ checked: it.isChecked, disabled: !isTrackableItem(it) }"
             @tap="onRowTap(it)"
             @longpress.stop.prevent="onRowLongPress(it)"
           >
+            <view class="check-indicator">
+              <text v-if="it.isChecked" class="check-icon">✓</text>
+              <text v-else-if="!isTrackableItem(it)" class="skip-icon">—</text>
+              <text v-else class="uncheck-icon">○</text>
+            </view>
             <view class="name-wrap">
-              <text class="name">{{ it.name }}</text>
+              <text class="name" :class="{ 'is-checked': it.isChecked }">{{ it.name }}</text>
               <text v-if="itemBagName(it)" class="bag-tag">{{ itemBagName(it) }}</text>
             </view>
             <view class="r">
               <text class="qty-tag">x{{ itemQty(it) }}</text>
               <text class="more-tag" @tap.stop="openItemActions(it)">更多</text>
-              <switch :checked="!!it.isChecked" />
             </view>
           </view>
         </view>
@@ -80,6 +125,10 @@
     </view>
 
     <view class="footer">
+      <view class="quick-actions">
+        <text class="quick-btn" @tap="checkAll">全部勾选</text>
+        <text class="quick-btn" @tap="uncheckAll">全部取消</text>
+      </view>
       <view v-if="quickItemPicks.length" class="quick-add">
         <text class="quick-label">常用快捷添加</text>
         <scroll-view scroll-x class="quick-scroll">
@@ -92,11 +141,39 @@
       </view>
       <view class="btns">
         <button class="ghost" @tap="addCustomItem">添加物品</button>
+        <button class="ghost" @tap="openGearPicker">从装备库添加</button>
         <button class="ghost" @tap="saveAsTemplate">另存为模板</button>
       </view>
       <button class="primary" :disabled="!canFinish" @tap="finish">清点完成</button>
     </view>
-    <view v-if="showBagPicker" class="mask" @tap="showBagPicker = false">
+    <view v-if="showGearPicker" class="mask" @tap="showGearPicker = false">
+      <view class="sheet gear-picker-sheet" @tap.stop>
+        <text class="sheet-title">从装备库添加物品</text>
+        <view class="gear-search">
+          <input v-model="gearSearchKeyword" class="search-input" placeholder="搜索装备..." />
+        </view>
+        <scroll-view scroll-y class="sheet-list gear-list">
+          <view v-if="filteredGearItems.length === 0" class="empty-gear">暂无匹配装备</view>
+          <view 
+            v-for="item in filteredGearItems" 
+            :key="item.id" 
+            class="gear-item"
+            :class="{ selected: selectedGearIds.includes(item.id) }"
+            @tap="toggleGearSelection(item.id)"
+          >
+            <view class="gear-info">
+              <text class="gear-name">{{ item.name }}</text>
+              <text class="gear-category">{{ item.category }}</text>
+            </view>
+            <text class="gear-check">{{ selectedGearIds.includes(item.id) ? '✓' : '' }}</text>
+          </view>
+        </scroll-view>
+        <view class="gear-actions">
+          <button class="sheet-btn secondary" @tap="showGearPicker = false">取消</button>
+          <button class="sheet-btn primary" @tap="addSelectedGearItems">添加选中 ({{ selectedGearIds.length }})</button>
+        </view>
+      </view>
+    </view>
       <view class="sheet" @tap.stop>
         <text class="sheet-title">选择本次携带箱包</text>
         <scroll-view scroll-y class="sheet-list">
@@ -155,6 +232,9 @@ const { themeClass, pageThemeStyle } = useAutoThemeClass()
 const list = ref([])
 const showBagPicker = ref(false)
 const draftBagIds = ref([])
+const showGearPicker = ref(false)
+const gearSearchKeyword = ref('')
+const selectedGearIds = ref([])
 const showSharePoster = ref(false)
 
 const trip = computed(() => store.trips.find((t) => t.id === tripId.value) || null)
@@ -201,18 +281,37 @@ const activeTripBags = computed(() =>
   tripBagIds.value.map((id) => bags.value.find((bag) => bag.id === id) || { id, name: '已删除箱包' }),
 )
 const items = computed(() => list.value)
+const groups = computed(() => {
+  const s = new Set(items.value.map((it) => it.group || '其他'))
+  return Array.from(s)
+})
 const itemsByGroup = computed(() => {
   const map = {}
-  for (const it of items.value) {
-    const g = it.group || '其他'
-    ;(map[g] || (map[g] = [])).push(it)
-  }
+  groups.value.forEach((g) => (map[g] = items.value.filter((it) => (it.group || '其他') === g)))
   return map
 })
-const groups = computed(() => Object.keys(itemsByGroup.value))
-function isTrackableItem(item) {
-  return isReturn.value ? !item?.isConsumable : true
-}
+
+// 装备库物品列表（过滤已添加的）
+const filteredGearItems = computed(() => {
+  const keyword = gearSearchKeyword.value.trim().toLowerCase()
+  const existingNames = items.value.map(it => it.name.toLowerCase())
+  
+  return gearStore.items.filter(item => {
+    // 过滤已添加的装备
+    if (existingNames.includes(item.name.toLowerCase())) return false
+    
+    // 搜索过滤
+    if (!keyword) return true
+    return item.name.toLowerCase().includes(keyword) || 
+           item.category.toLowerCase().includes(keyword)
+  })
+})
+
+// 快速选择物品（最近添加/常用）
+const quickItemPicks = computed(() => {
+  return gearStore.items.slice(0, 5)
+})
+
 const totalCount = computed(() => items.value.filter((it) => isTrackableItem(it)).length)
 const checkedCount = computed(() => items.value.filter((it) => isTrackableItem(it) && it.isChecked).length)
 const groupProgressList = computed(() =>
@@ -277,8 +376,55 @@ function toggle(it) {
   store.toggleItem(tripId.value, isReturn.value, it.id)
   refreshList()
 }
+function checkAll() {
+  // 只勾选当前模式下的物品（出发/返程）
+  const currentItems = items.value
+  currentItems.forEach((item) => {
+    if (isTrackableItem(item) && !item.isChecked) {
+      store.toggleItem(tripId.value, isReturn.value, item.id)
+    }
+  })
+  refreshList()
+  uni.showToast({ title: '已全部勾选', icon: 'none' })
+}
+function uncheckAll() {
+  // 取消当前模式下所有已勾选的物品
+  const currentItems = items.value
+  currentItems.forEach((item) => {
+    if (item.isChecked) {
+      store.toggleItem(tripId.value, isReturn.value, item.id)
+    }
+  })
+  refreshList()
+  uni.showToast({ title: '已取消全部勾选', icon: 'none' })
+}
+function isTrackableItem(item) {
+  // 消耗品仅在出发模式时可勾选，返程时不可勾选
+  if (isReturn.value && item.isConsumable) return false
+  return true
+}
 function toggleDetails() {
   showDetails.value = !showDetails.value
+}
+function toggleReturnMode() {
+  // 切换出发/返程模式
+  const newMode = isReturn.value ? 'departure' : 'return'
+  mode.value = newMode
+  
+  // 如果是切换到返程模式，确保返程物品列表已初始化
+  if (newMode === 'return') {
+    store.startReturnIfNeeded(tripId.value)
+  }
+  
+  // 刷新列表
+  refreshList()
+  
+  // 提示用户
+  uni.showToast({ 
+    title: isReturn.value ? '已切换到返程清点' : '已切换到出发清点', 
+    icon: 'none',
+    duration: 1500
+  })
 }
 async function jumpToGroup(anchorId) {
   const target = String(anchorId || '')

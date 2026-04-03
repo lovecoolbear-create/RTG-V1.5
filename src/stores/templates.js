@@ -203,6 +203,22 @@ export const useTemplateStore = defineStore('templates', {
       return results
     },
     
+    // 自动导入常用预设模板（首次使用）
+    autoImportCommonPresets() {
+      const commonPresets = [
+        'preset_business',    // 商务出差
+        'preset_daily',       // 日常通勤
+        'preset_short_trip'  // 短途旅行
+      ]
+      return this.importPresets(commonPresets)
+    },
+    
+    // 一键导入全部预设模板
+    importAllPresets() {
+      const allPresetIds = PRESET_TEMPLATES.map(p => p.id)
+      return this.importPresets(allPresetIds)
+    },
+    
     // 获取预设模板库（带导入状态）
     getPresetLibrary(category = 'all') {
       const templates = getTemplatesByCategory(category)
