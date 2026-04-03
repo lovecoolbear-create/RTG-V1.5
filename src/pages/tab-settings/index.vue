@@ -54,6 +54,10 @@
         <text>恢复数据 (从剪贴板导入)</text>
         <text class="arrow">></text>
       </view>
+      <view class="row" @tap="openAutoBackup">
+        <text>自动备份管理 ({{ autoBackupCount }}个版本)</text>
+        <text class="arrow">></text>
+      </view>
     </view>
     
     <view class="section">
@@ -87,6 +91,36 @@
       @confirm="onDialogConfirm"
       @action="onDialogAction"
     />
+
+    <!-- 自动备份列表弹窗 -->
+    <view v-if="showBackupList" class="backup-modal" @tap="showBackupList = false">
+      <view class="backup-sheet" @tap.stop>
+        <view class="backup-header">
+          <text class="backup-title">自动备份管理</text>
+          <text class="backup-close" @tap="showBackupList = false">✕</text>
+        </view>
+        <scroll-view scroll-y class="backup-list">
+          <view v-if="backupList.length === 0" class="backup-empty">
+            <text>暂无自动备份</text>
+          </view>
+          <view
+            v-for="(backup, index) in backupList"
+            :key="index"
+            class="backup-item"
+            @tap="restoreFromBackup(index)"
+          >
+            <view class="backup-info">
+              <text class="backup-date">{{ formatBackupTime(backup.timestamp) }}</text>
+              <text class="backup-detail">{{ backup.trips?.length || 0 }} 个行程</text>
+            </view>
+            <text class="backup-restore">恢复</text>
+          </view>
+        </scroll-view>
+        <view class="backup-tip">
+          <text>点击备份可恢复到该版本，最近10个版本自动保留</text>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -107,6 +141,7 @@ const envId = ref('')
 const tripCount = computed(() => tripStore.trips.length)
 const templateCount = computed(() => tplStore.templates.length)
 const gearCount = computed(() => gearStore.items.length)
+const autoBackupCount = computed(() => tripStore.getAutoBackups ? tripStore.getAutoBackups().length : 0)
 const RULES_STORAGE_KEY = 'departure_rules_v1'
 const defaultRules = {
   businessRequired: true,
@@ -119,14 +154,16 @@ const dialogState = ref({
   mode: 'confirm',
   title: '',
   message: '',
-  confirmText: '确认',
-  cancelText: '取消',
+  confirmText: '',
+  cancelText: '',
   placeholder: '',
   modelValue: '',
   danger: false,
-  closeOnMask: true,
   actions: [],
+  closeOnMask: true,
 })
+const showBackupList = ref(false)
+const backupList = ref([])
 let dialogResolver = null
 try {
   envId.value = uni.getStorageSync('cloud_env') || ''
@@ -196,6 +233,35 @@ async function doImport() {
       }
     },
   })
+}
+
+function openAutoBackup() {
+  backupList.value = tripStore.getAutoBackups ? tripStore.getAutoBackups() : []
+  showBackupList.value = true
+}
+
+function formatBackupTime(timestamp) {
+  const date = new Date(timestamp)
+  return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
+async function restoreFromBackup(index) {
+  const res = await openConfirm({
+    title: '恢复备份',
+    message: `确定要恢复到 ${formatBackupTime(backupList.value[index].timestamp)} 的备份吗？当前数据将被覆盖。`,
+    confirmText: '恢复',
+    danger: true
+  })
+  
+  if (!res.confirm) return
+  
+  const success = tripStore.restoreFromBackup(index)
+  if (success) {
+    uni.showToast({ title: '恢复成功', icon: 'success' })
+    showBackupList.value = false
+  } else {
+    uni.showToast({ title: '恢复失败', icon: 'none' })
+  }
 }
 
 function connectCloud() {
