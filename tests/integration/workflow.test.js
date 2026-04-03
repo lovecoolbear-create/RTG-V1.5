@@ -38,7 +38,10 @@ describe('Integration Tests - Core Workflows', () => {
       expect(trip).toBeDefined()
       expect(trip.title).toBe('上海出差')
       expect(trip.status).toBe('preparation')
-      expect(trip.items.length).toBeGreaterThan(0)
+      
+      // 验证物品
+      const tripItems = tripStore.itemsOf(trip.id, false)
+      expect(tripItems.length).toBeGreaterThan(0)
       
       // 3. 更新状态为打包中
       tripStore.updateTripMeta(trip.id, { status: 'packing' })

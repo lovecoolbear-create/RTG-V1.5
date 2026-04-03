@@ -100,6 +100,10 @@ describe('Template Store', () => {
     it('should not import same preset twice', () => {
       const store = useTemplateStore()
       
+      // 清除所有模板，确保干净的测试环境
+      store.templates = []
+      uni.setStorageSync('rtg_templates', JSON.stringify([]))
+      
       const id1 = store.importPreset('preset_camping')
       const id2 = store.importPreset('preset_camping')
       

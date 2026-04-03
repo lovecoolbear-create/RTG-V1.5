@@ -177,6 +177,9 @@ describe('Performance Tests', () => {
     it('should handle large gear inventory', () => {
       const gearStore = useGearStore()
       
+      // 先清空默认装备
+      gearStore.items = []
+      
       // 添加200件装备
       const start = performance.now()
       
@@ -227,7 +230,8 @@ describe('Performance Tests', () => {
       for (let i = 0; i < 20; i++) {
         tripStore.createTripFromTemplate(template, {
           title: `行程${i}`,
-          date: '2024-06-15'
+          date: '2024-06-15',
+          destination: '测试目的地'
         })
       }
       

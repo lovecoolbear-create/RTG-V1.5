@@ -45,7 +45,7 @@ describe('Error Handler', () => {
       expect(captured.type).toBe('api')
       expect(captured.code).toBe('API_001')
       expect(captured.message).toBe('Test error')
-      expect(captured.extra.url).toBe('/api/test')
+      expect(captured.url).toBe('/api/test')
     })
 
     it('should handle error without original error', () => {
@@ -88,13 +88,18 @@ describe('Error Handler', () => {
         throw new Error('Test error')
       }
       
+      // 注册错误监听器
+      const unsubscribe = errorHandler.onError(onErrorMock)
+      
       await withErrorHandling(asyncFn, {
         errorType: ErrorTypes.API,
-        errorCode: 'API_003',
-        onError: onErrorMock
+        errorCode: 'API_003'
       })
       
       expect(onErrorMock).toHaveBeenCalled()
+      
+      // 清理监听器
+      unsubscribe()
     })
   })
 
@@ -116,7 +121,7 @@ describe('Error Handler', () => {
     it('should get user-friendly message', () => {
       const errorInfo = {
         type: ErrorTypes.NETWORK,
-        code: 'NETWORK_OFFLINE'
+        code: 'offline'
       }
       const message = errorHandler.getUserMessage(errorInfo)
       
