@@ -46,6 +46,17 @@
     </view>
 
     <view class="section">
+      <view class="section-title">多设备同步</view>
+      <view class="row" @tap="openSyncModal">
+        <text>📱 设备间数据同步</text>
+        <text class="arrow">></text>
+      </view>
+      <view class="sync-status" v-if="deviceId">
+        <text class="sync-device">本机ID: {{ deviceId.substring(0, 8) }}...</text>
+      </view>
+    </view>
+    
+    <view class="section">
       <view class="row" @tap="doExport">
         <text>备份数据 (复制到剪贴板)</text>
         <text class="arrow">></text>
@@ -92,7 +103,42 @@
       @action="onDialogAction"
     />
 
-    <!-- 自动备份列表弹窗 -->
+    <!-- 多设备同步弹窗 -->
+    <view v-if="showSyncModal" class="sync-modal" @tap="closeSyncModal">
+      <view class="sync-sheet" @tap.stop>
+        <view class="sync-header">
+          <text class="sync-title">📱 设备间数据同步</text>
+          <text class="sync-close" @tap="closeSyncModal">✕</text>
+        </view>
+        <view class="sync-content">
+          <view class="sync-section">
+            <text class="sync-label">本机ID</text>
+            <view class="sync-code-box">
+              <text class="sync-code">{{ deviceId }}</text>
+              <text class="sync-copy" @tap="copyDeviceId">复制</text>
+            </view>
+          </view>
+          <view class="sync-divider">
+            <text>或</text>
+          </view>
+          <view class="sync-section">
+            <text class="sync-label">连接其他设备</text>
+            <view class="sync-input-box">
+              <input 
+                v-model="targetDeviceId" 
+                class="sync-input" 
+                placeholder="输入对方设备ID"
+                maxlength="32"
+              />
+              <button class="sync-btn" @tap="startSync">连接同步</button>
+            </view>
+          </view>
+          <view class="sync-tip">
+            <text>提示：在两台设备上同时打开此页面，互相复制ID并连接即可同步数据</text>
+          </view>
+        </view>
+      </view>
+    </view>
     <view v-if="showBackupList" class="backup-modal" @tap="showBackupList = false">
       <view class="backup-sheet" @tap.stop>
         <view class="backup-header">
@@ -164,10 +210,23 @@ const dialogState = ref({
 })
 const showBackupList = ref(false)
 const backupList = ref([])
+const showSyncModal = ref(false)
+const deviceId = ref('')
+const targetDeviceId = ref('')
 let dialogResolver = null
-try {
-  envId.value = uni.getStorageSync('cloud_env') || ''
-} catch {}
+
+// 生成或获取设备ID
+function getDeviceId() {
+  let id = uni.getStorageSync('rtg_device_id')
+  if (!id) {
+    id = 'RTG_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+    uni.setStorageSync('rtg_device_id', id)
+  }
+  return id
+}
+
+deviceId.value = getDeviceId()
+
 function loadRules() {
   try {
     const raw = uni.getStorageSync(RULES_STORAGE_KEY)
