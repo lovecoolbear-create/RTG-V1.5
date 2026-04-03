@@ -17,6 +17,30 @@
     </view>
 
     <view v-if="activeTab === 'gear'" class="gear-pane">
+      <!-- 补货提醒区域 -->
+      <view v-if="restockAlerts.length" class="restock-alerts">
+        <view class="alerts-header" @tap="toggleAlerts">
+          <text class="alerts-title">📦 补货提醒 ({{ restockAlerts.length }})</text>
+          <text class="alerts-toggle">{{ showAlerts ? '▲' : '▼' }}</text>
+        </view>
+        <view v-if="showAlerts" class="alerts-list">
+          <view
+            v-for="alert in restockAlerts.slice(0, 3)"
+            :key="alert.gearId"
+            class="alert-item"
+            :class="alert.priority"
+            @tap="goToConsumable(alert.gearId)"
+          >
+            <text class="alert-icon">{{ alert.priority === 'high' ? '🔴' : alert.priority === 'medium' ? '🟡' : '🔵' }}</text>
+            <view class="alert-content">
+              <text class="alert-message">{{ alert.message }}</text>
+            </view>
+          </view>
+          <view v-if="restockAlerts.length > 3" class="alert-more">
+            <text @tap="showAllAlerts">查看全部 {{ restockAlerts.length }} 条提醒 ></text>
+          </view>
+        </view>
+      </view>
       <view class="search-row">
         <view class="search-box">
           <input v-model="keyword" class="search-input" placeholder="搜索装备名称或分类" />
@@ -122,6 +146,7 @@ const activeTab = ref('gear')
 const keyword = ref('')
 const selectedGroup = ref('')
 const showGroupMenu = ref(false)
+const showAlerts = ref(true)
 const groups = computed(() => [...new Set(items.value.map((item) => item.group || '其他'))].sort())
 const selectedGroupLabel = computed(() => selectedGroup.value || '全部分类')
 const groupMenuOptions = computed(() => ['全部分类', ...groups.value])
@@ -133,6 +158,44 @@ const filteredItems = computed(() => {
     return item.name.includes(kw) || String(item.group || '').includes(kw)
   })
 })
+
+// 补货提醒
+const restockAlerts = computed(() => {
+  return store.getRestockAlerts ? store.getRestockAlerts() : []
+})
+
+function toggleAlerts() {
+  showAlerts.value = !showAlerts.value
+}
+
+function goToConsumable(gearId) {
+  const item = store.items.find(i => i.id === gearId)
+  if (item) {
+    // 导航到物品编辑页面或显示详情
+    uni.showModal({
+      title: item.name,
+      content: `库存: ${store.getInventory ? store.getInventory(gearId) : 0}\n\n是否补充库存？`,
+      confirmText: '补充库存',
+      success: (res) => {
+        if (res.confirm) {
+          uni.showToast({ title: '已标记为已补货', icon: 'success' })
+        }
+      }
+    })
+  }
+}
+
+function showAllAlerts() {
+  const alerts = restockAlerts.value
+  if (alerts.length === 0) return
+  
+  const alertList = alerts.map((a, i) => `${i + 1}. ${a.message}`).join('\n')
+  uni.showModal({
+    title: `全部提醒 (${alerts.length})`,
+    content: alertList,
+    showCancel: false
+  })
+}
 const rightOptions = [{ text: '删除', style: { backgroundColor: '#f43f5e', color: '#fff' } }]
 const quickGroups = ['证件', '电子', '服装', '个人护理', '补给', '其他', '自定义分组']
 const dialogState = ref({

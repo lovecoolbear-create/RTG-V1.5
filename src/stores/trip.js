@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { useGearStore } from './gear.js'
 
 function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
@@ -421,6 +422,13 @@ export const useTripStore = defineStore('trip', {
       const depKeys = new Set(dep.filter((i) => i.isChecked && !i.isConsumable).map((i) => `${i.name}|${i.group}`))
       const returned = ret.filter((i) => depKeys.has(`${i.name}|${i.group}`)).length
       const rate = depKeys.size ? returned / depKeys.size : null
+      
+      // 记录消耗品使用情况
+      const gearStore = useGearStore()
+      dep.filter(item => item.isChecked && item.isConsumable && item.gearId).forEach(item => {
+        gearStore.recordConsumableUsage(item.gearId, 1)
+      })
+      
       this.trips[idx] = {
         ...trip,
         status: 'archived',

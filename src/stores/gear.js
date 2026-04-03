@@ -62,6 +62,8 @@ export const useGearStore = defineStore('gear', {
   state: () => ({
     items: get('gear', DEFAULTS).map(normalizeItem),
     bags: get('gear_bags', DEFAULT_BAGS),
+    consumableUsage: get('gear_consumable_usage', {}), // 消耗品使用记录
+    inventory: get('gear_inventory', {}), // 库存记录
   }),
   actions: {
     save() {
@@ -160,6 +162,114 @@ export const useGearStore = defineStore('gear', {
         if (!this.bags?.length) this.bags = DEFAULT_BAGS
         this.save()
       }
+    },
+    // 消耗品使用追踪
+    recordConsumableUsage(gearId, quantity = 1) {
+      if (!this.consumableUsage[gearId]) {
+        this.consumableUsage[gearId] = { count: 0, lastUsed: null, history: [] }
+      }
+      const record = this.consumableUsage[gearId]
+      record.count += quantity
+      record.lastUsed = Date.now()
+      record.history.push({ date: Date.now(), quantity })
+      // 只保留最近20条记录
+      if (record.history.length > 20) {
+        record.history = record.history.slice(-20)
+      }
+      set('gear_consumable_usage', this.consumableUsage)
+    },
+    // 获取消耗品补货提醒
+    getRestockAlerts() {
+      const alerts = []
+      const now = Date.now()
+      const ONE_WEEK = 7 * 24 * 60 * 60 * 1000
+      const ONE_MONTH = 30 * 24 * 60 * 60 * 1000
+      
+      this.items.filter(item => item.isConsumable).forEach(item => {
+        const usage = this.consumableUsage[item.id]
+        if (!usage || !usage.lastUsed) {
+          // 从未使用过，可能是新添加的消耗品
+          alerts.push({
+            gearId: item.id,
+            name: item.name,
+            type: 'new',
+            message: `新添加消耗品「${item.name}」，记得补充库存`,
+            priority: 'low'
+          })
+          return
+        }
+        
+        const daysSinceLastUse = (now - usage.lastUsed) / (24 * 60 * 60 * 1000)
+        const monthlyUsage = this._calculateMonthlyUsage(item.id)
+        
+        // 高频使用提醒（每月使用超过2次）
+        if (monthlyUsage >= 2 && daysSinceLastUse > 14) {
+          alerts.push({
+            gearId: item.id,
+            name: item.name,
+            type: 'restock',
+            message: `「${item.name}」已${Math.round(daysSinceLastUse)}天未补充，建议检查库存`,
+            priority: 'high',
+            daysSinceLastUse,
+            monthlyUsage
+          })
+        }
+        // 低频使用提醒（每月使用1-2次）
+        else if (monthlyUsage >= 1 && daysSinceLastUse > 30) {
+          alerts.push({
+            gearId: item.id,
+            name: item.name,
+            type: 'check',
+            message: `「${item.name}」已${Math.round(daysSinceLastUse)}天未使用，请确认是否需要补充`,
+            priority: 'medium',
+            daysSinceLastUse,
+            monthlyUsage
+          })
+        }
+      })
+      
+      return alerts.sort((a, b) => {
+        const priorityMap = { high: 3, medium: 2, low: 1 }
+        return priorityMap[b.priority] - priorityMap[a.priority]
+      })
+    },
+    // 计算月均使用量
+    _calculateMonthlyUsage(gearId) {
+      const usage = this.consumableUsage[gearId]
+      if (!usage || !usage.history.length) return 0
+      
+      const now = Date.now()
+      const ONE_MONTH = 30 * 24 * 60 * 60 * 1000
+      const recentUses = usage.history.filter(h => now - h.date < ONE_MONTH * 3)
+      
+      if (recentUses.length === 0) return 0
+      
+      const totalQuantity = recentUses.reduce((sum, h) => sum + (h.quantity || 1), 0)
+      const monthsCovered = 3 // 统计最近3个月
+      
+      return totalQuantity / monthsCovered
+    },
+    // 设置库存数量
+    setInventory(gearId, quantity) {
+      this.inventory[gearId] = {
+        quantity: Math.max(0, parseInt(quantity) || 0),
+        updatedAt: Date.now()
+      }
+      set('gear_inventory', this.inventory)
+    },
+    // 获取库存数量
+    getInventory(gearId) {
+      return this.inventory[gearId]?.quantity || 0
+    },
+    // 减少库存（使用后）
+    consumeInventory(gearId, quantity = 1) {
+      const current = this.getInventory(gearId)
+      if (current > 0) {
+        this.setInventory(gearId, current - quantity)
+        this.recordConsumableUsage(gearId, quantity)
+        return true
+      }
+      return false
     }
   },
 })
