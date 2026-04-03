@@ -218,5 +218,96 @@ describe('Trip Store', () => {
       expect(store.trips.length).toBe(1)
       expect(store.trips[0].title).toBe('导入行程')
     })
+  describe('边界条件测试', () => {
+    it('should handle empty template', () => {
+      const store = useTripStore()
+      const trip = store.createTripFromTemplate({ name: '', items: [] }, { title: '空模板' })
+      expect(trip).toBeDefined()
+      expect(store.itemsOf(trip.id, false)).toHaveLength(0)
+    })
+
+    it('should handle large number of items', () => {
+      const store = useTripStore()
+      const items = Array(100).fill(null).map((_, i) => ({
+        name: `物品${i}`,
+        group: '批量测试'
+      }))
+      
+      const trip = store.createTripFromTemplate(
+        { name: '大批量模板', items },
+        { title: '大批量行程' }
+      )
+      
+      expect(store.itemsOf(trip.id, false)).toHaveLength(100)
+    })
+
+    it('should handle duplicate trip ids gracefully', () => {
+      const store = useTripStore()
+      const template = { name: '模板', items: [] }
+      
+      const trip1 = store.createTripFromTemplate(template, { title: '行程1' })
+      const trip2 = store.createTripFromTemplate(template, { title: '行程2' })
+      
+      expect(trip1.id).not.toBe(trip2.id)
+    })
+
+    it('should handle updating non-existent trip', () => {
+      const store = useTripStore()
+      // 不应该抛出错误
+      expect(() => {
+        store.updateTripMeta('non-existent-id', { title: '新标题' })
+      }).not.toThrow()
+    })
+
+    it('should handle deleting non-existent trip', () => {
+      const store = useTripStore()
+      // 不应该抛出错误
+      expect(() => {
+        store.deleteTrip('non-existent-id')
+      }).not.toThrow()
+    })
+
+    it('should handle toggle on non-existent item', () => {
+      const store = useTripStore()
+      const template = { name: '模板', items: [{ name: '物品1', group: '测试' }] }
+      const trip = store.createTripFromTemplate(template, { title: '测试' })
+      
+      // 切换不存在的物品ID
+      expect(() => {
+        store.toggleItem(trip.id, false, 'non-existent-item-id')
+      }).not.toThrow()
+    })
+
+    it('should handle special characters in trip title', () => {
+      const store = useTripStore()
+      const specialTitles = [
+        '行程<>"\'&',
+        '行程😀🎉',
+        '行程\n\t',
+        '   前后空格   ',
+        ''
+      ]
+      
+      specialTitles.forEach(title => {
+        const trip = store.createTripFromTemplate(
+          { name: '模板', items: [] },
+          { title }
+        )
+        expect(trip.title).toBe(title)
+      })
+    })
+
+    it('should calculate progress with zero items', () => {
+      const store = useTripStore()
+      const template = { name: '空模板', items: [] }
+      const trip = store.createTripFromTemplate(template, { title: '测试' })
+      
+      const items = store.itemsOf(trip.id, false)
+      const progress = items.length > 0 
+        ? items.filter(i => i.isChecked).length / items.length 
+        : 0
+      
+      expect(progress).toBe(0)
+    })
   })
 })
