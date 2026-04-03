@@ -24,6 +24,40 @@
       </button>
     </view>
     <view v-if="archived.length === 0" class="empty">暂无历史归档</view>
+
+    <!-- 旅行档案统计卡片 -->
+    <view v-if="archived.length > 0" class="travel-profile">
+      <view class="profile-header">
+        <text class="profile-title">旅行档案</text>
+        <text class="profile-subtitle">{{ archived.length }} 次出行记录</text>
+      </view>
+      <view class="profile-grid">
+        <view class="profile-item">
+          <text class="profile-value">{{ mostUsedTemplate || '暂无' }}</text>
+          <text class="profile-label">最常用模板</text>
+        </view>
+        <view class="profile-item">
+          <text class="profile-value">{{ avgItemsPerTrip }}</text>
+          <text class="profile-label">平均物品数</text>
+        </view>
+        <view class="profile-item">
+          <text class="profile-value">{{ totalItemsPacked }}</text>
+          <text class="profile-label">累计打包</text>
+        </view>
+        <view class="profile-item">
+          <text class="profile-value">{{ bestRecoveryRate }}%</text>
+          <text class="profile-label">最佳找回率</text>
+        </view>
+      </view>
+      <view v-if="frequentItems.length" class="frequent-section">
+        <text class="frequent-title">常用物品</text>
+        <view class="frequent-tags">
+          <text v-for="item in frequentItems" :key="item.name" class="frequent-tag">
+            {{ item.name }} ({{ item.count }}次)
+          </text>
+        </view>
+      </view>
+    </view>
     <view v-for="t in archivedSorted" :key="t.id" class="card" @tap="onCardTap(t)">
       <view class="row">
         <view class="row-left">
@@ -97,10 +131,83 @@ const avgRecoveryRate = computed(() => {
   const rates = archived.value
     .filter((item) => typeof item.recoveryRate === 'number')
     .map((item) => item.recoveryRate)
-  if (!rates.length) return 0
+  if (rates.length === 0) return 0
   const avg = rates.reduce((sum, val) => sum + val, 0) / rates.length
   return Math.round(avg * 100)
 })
+
+const mostUsedTemplate = computed(() => {
+  const templateCounts = {}
+  archived.value.forEach(trip => {
+    const tplId = trip.templateId || trip.title
+    templateCounts[tplId] = (templateCounts[tplId] || 0) + 1
+  })
+  
+  let maxCount = 0
+  let mostUsed = null
+  Object.entries(templateCounts).forEach(([id, count]) => {
+    if (count > maxCount) {
+      maxCount = count
+      mostUsed = id
+    }
+  })
+  
+  return mostUsed && maxCount > 1 ? mostUsed.split('_').pop() : null
+})
+
+const avgItemsPerTrip = computed(() => {
+  let totalItems = 0
+  let tripsWithItems = 0
+  
+  archived.value.forEach(trip => {
+    const items = store.itemsOf(trip.id, false)
+    if (items && items.length > 0) {
+      totalItems += items.length
+      tripsWithItems++
+    }
+  })
+  
+  return tripsWithItems > 0 ? Math.round(totalItems / tripsWithItems) : 0
+})
+
+const totalItemsPacked = computed(() => {
+  let total = 0
+  archived.value.forEach(trip => {
+    const items = store.itemsOf(trip.id, false)
+    total += items ? items.length : 0
+  })
+  return total
+})
+
+const bestRecoveryRate = computed(() => {
+  const rates = archived.value
+    .filter((t) => typeof t.recoveryRate === 'number')
+    .map((t) => t.recoveryRate)
+  
+  if (rates.length === 0) return 0
+  return Math.round(Math.max(...rates) * 100)
+})
+
+const frequentItems = computed(() => {
+  const itemCounts = {}
+  
+  archived.value.forEach(trip => {
+    const items = store.itemsOf(trip.id, false)
+    if (items) {
+      items.forEach(item => {
+        const key = item.name
+        itemCounts[key] = (itemCounts[key] || 0) + 1
+      })
+    }
+  })
+  
+  return Object.entries(itemCounts)
+    .map(([name, count]) => ({ name, count }))
+    .filter(item => item.count >= 2)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8)
+})
+
 const int = (n) => Math.round(n)
 const dateText = (ts) => {
   try {
