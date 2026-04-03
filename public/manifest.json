@@ -1,0 +1,129 @@
+{
+  "name": "ReadyToGo 出行清单",
+  "short_name": "ReadyToGo",
+  "description": "智能出行清单管理工具，帮助您准备每一次旅行",
+  "icons": [
+    {
+      "src": "./static/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "./static/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "./static/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "./static/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "./static/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "./static/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "./static/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "./static/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#071020",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "scope": "./",
+  "lang": "zh-CN",
+  "dir": "ltr",
+  "categories": ["productivity", "travel", "utilities"],
+  "screenshots": [
+    {
+      "src": "./static/screenshots/home.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "首页 - 行程管理"
+    },
+    {
+      "src": "./static/screenshots/checklist.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "清单页 - 物品清点"
+    },
+    {
+      "src": "./static/screenshots/gear.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "装备库 - 装备管理"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "快速创建行程",
+      "short_name": "创建行程",
+      "description": "快速创建一个新的出行行程",
+      "url": "./index.html?action=create-trip",
+      "icons": [{ "src": "./static/icons/shortcut-create.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "查看装备库",
+      "short_name": "装备库",
+      "description": "查看和管理您的装备",
+      "url": "./index.html?page=gear",
+      "icons": [{ "src": "./static/icons/shortcut-gear.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "今日行程",
+      "short_name": "今日",
+      "description": "查看今天的行程安排",
+      "url": "./index.html?page=today",
+      "icons": [{ "src": "./static/icons/shortcut-today.png", "sizes": "96x96" }]
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.readytogo.app",
+      "id": "com.readytogo.app"
+    }
+  ],
+  "prefer_related_applications": false,
+  "share_target": {
+    "action": "./share-target.html",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "handle_links": "preferred"
+}
